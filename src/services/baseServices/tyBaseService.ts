@@ -1,3 +1,8 @@
+import * as dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
+
 /**
  * TY（通义千问）服务基类
  * 提供 TY API 的通用配置和基础功能
@@ -7,8 +12,8 @@ export abstract class TyBaseService {
   protected readonly TY_API_URL: string;
 
   constructor() {
-    this.TY_API_KEY = process.env.TY_API_KEY;
-    this.TY_API_URL = process.env.VITE_TY_API_URL;
+    this.TY_API_KEY = process.env.TY_API_KEY || '';
+    this.TY_API_URL = process.env.TY_API_URL || '';
   }
 
   /**

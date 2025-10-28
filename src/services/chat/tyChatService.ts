@@ -7,7 +7,10 @@ import type {
   ChatServiceName,
 } from './types';
 
-export class TyChatService extends TyBaseService implements ChatServiceDefinition {
+export class TyChatService
+  extends TyBaseService
+  implements ChatServiceDefinition
+{
   name: ChatServiceName = 'chat_ty';
 
   async execute(params: ChatRequestParams) {

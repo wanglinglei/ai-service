@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { parseDocxWithMammoth } from './utils/docxParser';
+import { parseDocxWithMammoth, cleanupFile } from './utils/docxParser';
+import { serviceController } from 'src/services';
+import * as mammoth from 'mammoth';
 
 @Injectable()
 export class DocxProcessService {
@@ -7,8 +9,60 @@ export class DocxProcessService {
     rawFile: Express.Multer.File,
     templateFile: Express.Multer.File,
   ): Promise<string> {
+    const rawText = await mammoth.extractRawText({ path: rawFile.path });
     const fields = await parseDocxWithMammoth(templateFile.path);
 
-    return 'ok';
+    const prompt = `
+      请从以下原始文档中提取以下字段的信息：
+      **字段列表**：
+      ${fields.join(', ')}
+      **原始文档内容**：
+      \`\`\`
+      ${rawText.value}
+      \`\`\`
+
+      **要求**：
+      - 返回一个 JSON 对象，字段名严格匹配
+      - 如果某字段未找到，对应值为空字符串 ""
+      - 不要添加额外说明
+      `;
+    const body = {
+      model: 'qwen-max',
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是一个专业的文档解析专家，请从以下原始文档中提取以下字段的信息：',
+        },
+        { role: 'user', content: prompt },
+      ],
+    };
+
+    const response = await serviceController.executeService(
+      'chat',
+      'chat_ty',
+      body,
+    );
+    try {
+      const data = JSON.parse(response.data.content);
+      // @ts-ignore
+      return {
+        success: true,
+        data: data,
+        code: 200,
+        serviceName: 'chat_ty',
+      };
+    } catch (error) {
+      // @ts-ignore
+      return {
+        success: false,
+        data: {},
+        code: 500,
+        serviceName: 'chat_ty',
+      };
+    } finally {
+      cleanupFile(rawFile.path);
+      cleanupFile(templateFile.path);
+    }
   }
 }

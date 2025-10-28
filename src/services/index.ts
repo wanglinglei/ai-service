@@ -1,10 +1,19 @@
-import { videoGenerator } from './video';
-export { videoGenerator };
-
 import { ServiceRegistry, ServiceExecutor } from './http';
-import { GlmChatService, TyChatService, chatServiceNameConfig } from './chat/index';
-import { GlmVideoService, TyVideoService, videoServiceNameConfig } from './video/index';
-import { GlmImageService, TyImageService, imageServiceNameConfig } from './image/index';
+import {
+  GlmChatService,
+  TyChatService,
+  chatServiceNameConfig,
+} from './chat/index';
+import {
+  GlmVideoService,
+  TyVideoService,
+  videoServiceNameConfig,
+} from './video/index';
+import {
+  GlmImageService,
+  TyImageService,
+  imageServiceNameConfig,
+} from './image/index';
 
 const serviceRegistry = new ServiceRegistry();
 serviceRegistry.registerService(new GlmChatService());
@@ -24,7 +33,11 @@ const serviceExecutor = new ServiceExecutor(serviceRegistry);
 
 class ServiceController {
   async executeService(feature: string, selectedService: string, params: any) {
-    return await serviceExecutor.executeFeatureService(feature, selectedService, params);
+    return await serviceExecutor.executeFeatureService(
+      feature,
+      selectedService,
+      params,
+    );
   }
 }
 
