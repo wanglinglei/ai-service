@@ -44,7 +44,6 @@ export class DocxProcessService {
       'chat_ty',
       body,
     );
-    console.log('response', response);
     try {
       const data = JSON.parse(response.data.content);
       // @ts-ignore
