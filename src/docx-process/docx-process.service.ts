@@ -22,7 +22,8 @@ export class DocxProcessService {
       \`\`\`
 
       **要求**：
-      - 返回一个 JSON 对象，字段名严格匹配
+      - 返回一个数组结构的 JSON 对象，数组中每个元素的结构为：{ field: value }，字段名严格匹配
+      - 每匹配到一个完整数据,就作为数组中的一个元素，不要合并多个数据为一个元素
       - 如果某字段未找到，对应值为空字符串 ""
       - 不要添加额外说明
       `;
@@ -43,6 +44,7 @@ export class DocxProcessService {
       'chat_ty',
       body,
     );
+    console.log('response', response);
     try {
       const data = JSON.parse(response.data.content);
       // @ts-ignore
