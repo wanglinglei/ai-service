@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+
 import { ServiceRegistry, ServiceExecutor } from './http';
 import {
   GlmChatService,
@@ -14,6 +16,8 @@ import {
   TyImageService,
   imageServiceNameConfig,
 } from './image/index';
+
+dotenv.config();
 
 const serviceRegistry = new ServiceRegistry();
 serviceRegistry.registerService(new GlmChatService());

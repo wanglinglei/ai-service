@@ -5,8 +5,8 @@
   "compilerOptions": {
     "deleteOutDir": false,
     "assets": [
-      "../.env",
-      "../package.json"
+      ".env",
+      "package.json"
     ],
     "watchAssets": true
   }

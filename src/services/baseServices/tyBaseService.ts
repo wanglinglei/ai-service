@@ -1,8 +1,3 @@
-import * as dotenv from 'dotenv';
-
-// 加载环境变量
-dotenv.config();
-
 /**
  * TY（通义千问）服务基类
  * 提供 TY API 的通用配置和基础功能
