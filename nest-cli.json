@@ -3,10 +3,10 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true,
+    "deleteOutDir": false,
     "assets": [
-      ".env",
-      "package.json"
+      "../.env",
+      "../package.json"
     ],
     "watchAssets": true
   }
