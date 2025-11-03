@@ -7,10 +7,7 @@ import {
   Body,
   HttpCode,
 } from '@nestjs/common';
-import {
-  FilesInterceptor,
-  FileFieldsInterceptor,
-} from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { DocxProcessService } from './docx-process.service';
@@ -24,7 +21,7 @@ export class DocxProcessController {
     return 'ok';
   }
 
-  @Post('/process')
+  @Post('/processData')
   @HttpCode(200)
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -33,7 +30,6 @@ export class DocxProcessController {
           name: 'rawDocument',
           maxCount: 1,
         },
-        { name: 'template', maxCount: 1 },
       ],
       {
         dest: 'uploads/',
@@ -48,29 +44,30 @@ export class DocxProcessController {
           },
         }),
         fileFilter: (req, file: Express.Multer.File, cb) => {
-          return cb(null, true);
-          // if (file.originalname.toLowerCase().endsWith('.docx')) {
-          //   cb(null, true);
-          // } else {
-          //   cb(new Error('仅支持 .docx 文件'), false);
-          // }
+          if (file.originalname.toLowerCase().endsWith('.docx')) {
+            cb(null, true);
+          } else {
+            cb(new Error('仅支持 .docx 文件'), false);
+          }
         },
       },
     ),
   )
-  process(
+  processData(
     @UploadedFiles()
     files: {
       rawDocument: Express.Multer.File[];
-      template: Express.Multer.File[];
     },
+    @Body() body: { templateJson?: string },
   ): Promise<string> {
-    const { rawDocument = [], template = [] } = files;
-    if (!rawDocument || !template) {
-      throw new Error('请上传两个文件：rawDocument 和 template');
+    const { rawDocument = [] } = files;
+    const { templateJson } = body;
+    if (!rawDocument) {
+      throw new Error('请上传内容文件：rawDocument');
     }
-    console.log('rawDocument[0]', rawDocument[0]);
-    console.log('template[0]', template[0]);
-    return this.docxProcessService.process(rawDocument[0], template[0]);
+    if (!templateJson) {
+      throw new Error('请上传模板数据：templateJson');
+    }
+    return this.docxProcessService.processData(rawDocument[0], templateJson);
   }
 }

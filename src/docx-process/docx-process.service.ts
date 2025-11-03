@@ -5,28 +5,26 @@ import * as mammoth from 'mammoth';
 
 @Injectable()
 export class DocxProcessService {
-  async process(
+  async processData(
     rawFile: Express.Multer.File,
-    templateFile: Express.Multer.File,
+    templateJson: string,
   ): Promise<string> {
     const rawText = await mammoth.extractRawText({ path: rawFile.path });
-    const fields = await parseDocxWithMammoth(templateFile.path);
-
     const prompt = `
-      请从以下原始文档中提取以下字段的信息：
-      **字段列表**：
-      ${fields.join(', ')}
-      **原始文档内容**：
-      \`\`\`
-      ${rawText.value}
-      \`\`\`
+    请从以下原始文档中提取以下字段的信息：
+    **字段列表**：
+    ${templateJson}
+    **原始文档内容**：
+    \`\`\`
+    ${rawText.value}
+    \`\`\`
 
-      **要求**：
-      - 返回一个数组结构的 JSON 对象，数组中每个元素的结构为：{ field: value }，字段名严格匹配
-      - 每匹配到一个完整数据,就作为数组中的一个元素，不要合并多个数据为一个元素
-      - 如果某字段未找到，对应值为空字符串 ""
-      - 不要添加额外说明
-      `;
+    **要求**：
+    - 返回一个数组结构的 JSON 对象，数组中每个元素的结构为：{ field: value }，字段名严格匹配
+    - 每匹配到一个完整数据,就作为数组中的一个元素，不要合并多个数据为一个元素
+    - 如果某字段未找到，对应值为空字符串 ""
+    - 不要添加额外说明
+    `;
     const body = {
       model: 'qwen-max',
       messages: [
@@ -63,7 +61,6 @@ export class DocxProcessService {
       };
     } finally {
       cleanupFile(rawFile.path);
-      cleanupFile(templateFile.path);
     }
   }
 }
