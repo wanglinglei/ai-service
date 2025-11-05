@@ -26,7 +26,7 @@ jobs:
           cache: 'pnpm' # 使用 pnpm 缓存
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build project
         run: pnpm run build
