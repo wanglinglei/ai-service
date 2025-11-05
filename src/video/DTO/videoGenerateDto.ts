@@ -16,3 +16,15 @@ export interface VideoGenerateDto {
   parameters: VideoGenerateParameters;
   provider: string;
 }
+
+export interface GlmGenerateVideoDto {
+  size: string;
+  duration: number;
+  audio: boolean;
+  fps: number;
+  quality: number;
+  provider: string;
+  model: string;
+  with_audio?: boolean;
+  watermark_enabled?: boolean;
+}
