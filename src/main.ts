@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 
@@ -13,4 +14,4 @@ async function bootstrap() {
   app.setGlobalPrefix('ai-service');
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

@@ -1,0 +1,125 @@
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+// 用户来源枚举
+export enum UserSource {
+  WECHAT = 'wechat',
+  ALIPAY = 'alipay',
+  WEB = 'web',
+  OTHER = 'other',
+}
+
+// 用户状态枚举
+export enum UserStatus {
+  DISABLED = 'disabled',
+  ENABLED = 'enabled',
+}
+
+// 性别枚举
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+  UNKNOWN = 'unknown',
+}
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    unique: true,
+    comment: '用户名',
+  })
+  username: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    unique: true,
+    comment: '邮箱',
+  })
+  email: string;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    comment: '密码（加密）',
+  })
+  password: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    comment: '用户昵称',
+  })
+  nickname: string;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '用户头像URL',
+  })
+  avatar: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserSource,
+    default: UserSource.OTHER,
+    comment: '用户来源',
+  })
+  source: UserSource;
+
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ENABLED,
+    comment: '用户状态',
+  })
+  status: UserStatus;
+
+  @Column({
+    type: 'enum',
+    enum: Gender,
+    default: Gender.UNKNOWN,
+    comment: '性别',
+  })
+  gender: Gender;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: '微信用户ID',
+  })
+  wechatUserId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: '支付宝用户ID',
+  })
+  alipayUserId: string;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    comment: '创建时间',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    comment: '更新时间',
+  })
+  updatedAt: Date;
+}
