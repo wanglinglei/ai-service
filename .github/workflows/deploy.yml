@@ -1,0 +1,113 @@
+name: Build and Upload
+
+on:
+  push:
+    branches:
+      - main # 当推送到 main 分支时触发
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 根据你的 Node.js 版本调整
+          cache: 'pnpm' # 如果使用 pnpm
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy
+          cp -r dist deploy/
+          cp package.json deploy/
+          cp pnpm-lock.yaml deploy/ 2>/dev/null || true
+          # 如果需要 .env 文件，请确保在 GitHub Secrets 中配置并在服务器上创建
+
+      - name: Create deployment archive
+        run: |
+          cd deploy
+          tar -czf ../deploy.tar.gz .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          # 上传部署文件
+          echo "正在上传部署文件到服务器..."
+          scp deploy.tar.gz ${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/
+
+          # 创建并上传部署脚本（只负责解压和安装依赖，不重启应用）
+          cat > deploy.sh << 'DEPLOYSCRIPT'
+          #!/bin/bash
+          set -e
+          DEPLOY_PATH="$1"
+          cd "$DEPLOY_PATH"
+
+          # 备份当前版本（可选）
+          if [ -d "dist" ]; then
+            BACKUP_DIR="backup_$(date +%Y%m%d_%H%M%S)"
+            mkdir -p backups
+            cp -r dist backups/${BACKUP_DIR} || true
+            echo "已备份到 backups/${BACKUP_DIR}"
+          fi
+
+          # 解压新版本
+          echo "解压部署文件..."
+          tar -xzf deploy.tar.gz
+
+          # 安装生产依赖
+          echo "安装生产依赖..."
+          if command -v pnpm &> /dev/null; then
+            cd dist && pnpm install --prod --frozen-lockfile
+          else
+            cd dist && npm install --production
+          fi
+
+          # 清理部署文件
+          rm -f deploy.tar.gz
+
+          echo "文件已上传并解压完成！"
+          echo "请在服务器上手动重启应用。"
+          DEPLOYSCRIPT
+
+          chmod +x deploy.sh
+          scp deploy.sh ${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/
+
+          # 执行部署脚本（只解压和安装依赖）
+          echo "正在服务器上解压文件并安装依赖..."
+          ssh ${SSH_USER}@${SSH_HOST} "bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} && rm -f ${DEPLOY_PATH}/deploy.sh"
+
+          echo "✅ 部署文件已成功上传到服务器！"
+          echo "⚠️  请记得在服务器上手动重启应用。"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf deploy deploy.tar.gz
