@@ -63,32 +63,20 @@ jobs:
           echo "正在上传部署文件到服务器..."
           scp deploy.tar.gz ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
 
-          # 创建并上传部署脚本（只负责解压和安装依赖，不重启应用）
+          # 创建并上传部署脚本（删除所有文件并解压到当前目录）
           cat > deploy.sh << 'DEPLOYSCRIPT'
           #!/bin/bash
           set -e
           DEPLOY_PATH="$1"
           cd "$DEPLOY_PATH"
 
-          # 备份当前版本（可选）
-          if [ -d "dist" ]; then
-            BACKUP_DIR="backup_$(date +%Y%m%d_%H%M%S)"
-            mkdir -p backups
-            cp -r dist backups/${BACKUP_DIR} || true
-            echo "已备份到 backups/${BACKUP_DIR}"
-          fi
+          # 删除当前目录下的所有文件（保留目录本身）
+          echo "删除所有旧文件..."
+          find . -mindepth 1 -maxdepth 1 ! -name 'deploy.tar.gz' ! -name 'deploy.sh' -exec rm -rf {} + 2>/dev/null || true
 
-          # 解压新版本
-          echo "解压部署文件..."
+          # 解压新版本到当前目录
+          echo "解压部署文件到当前目录..."
           tar -xzf deploy.tar.gz
-
-          # 安装生产依赖
-          echo "安装生产依赖..."
-          if command -v pnpm &> /dev/null; then
-            cd dist && pnpm install --prod --frozen-lockfile
-          else
-            cd dist && npm install --production
-          fi
 
           # 清理部署文件
           rm -f deploy.tar.gz
@@ -100,8 +88,8 @@ jobs:
           chmod +x deploy.sh
           scp deploy.sh ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
 
-          # 执行部署脚本（只解压和安装依赖）
-          echo "正在服务器上解压文件并安装依赖..."
+          # 执行部署脚本（删除所有文件并解压到当前目录）
+          echo "正在服务器上删除所有文件并解压新文件..."
           ssh ${SERVER_USERNAME}@${SERVER_HOST} "bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} && rm -f ${DEPLOY_PATH}/deploy.sh"
 
           echo "✅ 部署文件已成功上传到服务器！"
