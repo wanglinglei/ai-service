@@ -8,7 +8,7 @@ export abstract class GlmBaseService {
 
   constructor() {
     this.GLM_API_KEY = process.env.GLM_API_KEY || '';
-    this.GLM_API_URL = process.env.GLM_API_URL || '';
+    this.GLM_API_URL = 'https://open.bigmodel.cn';
   }
 
   /**

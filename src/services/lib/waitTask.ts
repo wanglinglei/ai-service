@@ -14,13 +14,13 @@ interface WaitTaskParams {
 
 const requestMap = {
   glm: {
-    url: `${process.env.GLM_API_URL}/api/paas/v4/async-result/`,
+    url: 'https://open.bigmodel.cn/api/paas/v4/async-result/',
     headers: {
       Authorization: `Bearer ${process.env.GLM_API_KEY}`,
     },
   },
   ty: {
-    url: `${process.env.TY_API_URL}/api/v1/tasks/`,
+    url: 'https://dashscope.aliyuncs.com/api/v1/tasks/',
     headers: {
       Authorization: `Bearer ${process.env.TY_API_KEY}`,
     },

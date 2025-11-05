@@ -59,6 +59,11 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          # 环境变量配置（从 GitHub Secrets 读取）
+          ENV_PORT: ${{ secrets.ENV_PORT }}
+          ENV_NODE_ENV: ${{ secrets.ENV_NODE_ENV }}
+          ENV_GLM_API_KEY: ${{ secrets.ENV_GLM_API_KEY }}
+          ENV_TY_API_KEY: ${{ secrets.ENV_TY_API_KEY }}
         run: |
           # 上传部署文件
           echo "正在上传部署文件到服务器..."
@@ -93,7 +98,19 @@ jobs:
           echo "正在服务器上删除所有文件并解压新文件..."
           ssh ${SERVER_USERNAME}@${SERVER_HOST} "bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} && rm -f ${DEPLOY_PATH}/deploy.sh"
 
+          # 创建 .env 文件
+          echo "正在创建 .env 文件..."
+          {
+            echo "NODE_ENV=${ENV_NODE_ENV:-production}"
+            echo "PORT=${ENV_PORT:-3000}"
+            echo "GLM_API_KEY=${ENV_GLM_API_KEY}"
+            echo "TY_API_KEY=${ENV_TY_API_KEY}"
+          } > .env
+          scp .env ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
+          rm -f .env
+
           echo "✅ 部署文件已成功上传到服务器！"
+          echo "✅ 环境变量已配置完成！"
           echo "⚠️  请记得在服务器上手动重启应用。"
 
       - name: Cleanup

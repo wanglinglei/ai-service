@@ -8,7 +8,7 @@ export abstract class TyBaseService {
 
   constructor() {
     this.TY_API_KEY = process.env.TY_API_KEY || '';
-    this.TY_API_URL = process.env.TY_API_URL || '';
+    this.TY_API_URL = 'https://dashscope.aliyuncs.com';
   }
 
   /**
