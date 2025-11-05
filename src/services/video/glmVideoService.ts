@@ -8,10 +8,15 @@ import type {
 } from './types';
 import { waitTask } from '../lib/waitTask';
 
-export class GlmVideoService extends GlmBaseService implements VideoServiceDefinition {
+export class GlmVideoService
+  extends GlmBaseService
+  implements VideoServiceDefinition
+{
   name: VideoServiceName = 'video_glm';
 
-  async execute(params: VideoRequestParams): Promise<VideoResponse | undefined> {
+  async execute(
+    params: VideoRequestParams,
+  ): Promise<VideoResponse | undefined> {
     const response = await baseFetch({
       method: 'POST',
       url: this.buildApiUrl('/api/paas/v4/videos/generations'),

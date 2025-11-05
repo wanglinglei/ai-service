@@ -1,3 +1,8 @@
+import * as dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
+
 interface WaitTaskParams {
   taskId: string; // 任务ID
   maxAttempts?: number; // 最大尝试次数
@@ -9,13 +14,13 @@ interface WaitTaskParams {
 
 const requestMap = {
   glm: {
-    url: `${process.env.VITE_GLM_API_URL}/api/paas/v4/async-result/`,
+    url: `${process.env.GLM_API_URL}/api/paas/v4/async-result/`,
     headers: {
       Authorization: `Bearer ${process.env.GLM_API_KEY}`,
     },
   },
   ty: {
-    url: `${process.env.VITE_TY_API_URL}/api/v1/tasks/`,
+    url: `${process.env.TY_API_URL}/api/v1/tasks/`,
     headers: {
       Authorization: `Bearer ${process.env.TY_API_KEY}`,
     },
@@ -25,8 +30,8 @@ const requestMap = {
 export const waitTask = async (params: WaitTaskParams) => {
   const {
     taskId,
-    maxAttempts = 60,
-    delay = 5000,
+    maxAttempts = 80,
+    delay = 8000,
     sign,
     checkTaskCompleted,
     checkTaskFailed,

@@ -50,7 +50,7 @@ export const request = async (params: BaseRequestParams) => {
     dashScopeAsync,
   } = params;
 
-  let headers = {
+  const headers = {
     Authorization: `Bearer ${DASHSCOPE_API_KEY}`,
     'Content-Type': contentType,
   } as Record<string, string>;
@@ -70,14 +70,5 @@ export const request = async (params: BaseRequestParams) => {
     );
   }
   const responseData = await response.json();
-
-  console.log('response', responseData);
-  console.log('response.output', responseData.output?.task_id);
-  // 如果是异步任务，返回任务ID
-  if (responseData.output?.task_id) {
-    // 等待任务完成并获取结果
-    const result = await waitForTaskCompletion(responseData.output.task_id);
-    return result;
-  }
   return responseData;
 };
