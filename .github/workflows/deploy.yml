@@ -14,16 +14,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # 根据你的 Node.js 版本调整
-          cache: 'pnpm' # 如果使用 pnpm
-
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 根据你的 Node.js 版本调整
+          cache: 'pnpm' # 使用 pnpm 缓存
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
