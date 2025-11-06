@@ -2,16 +2,31 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
+  Request,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import * as svgCaptcha from 'svg-captcha';
 import { User, UserSource, Gender, UserStatus } from './entitys/user.entity';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
 import { AuthResponseDto } from './DTO/authResponseDto';
+
+interface SessionData {
+  captcha?: string;
+  [key: string]: any;
+}
+
+interface RequestWithSession extends Request {
+  session: {
+    captcha?: string;
+    [key: string]: any;
+  };
+}
 
 @Injectable()
 export class UserService {
@@ -24,8 +39,22 @@ export class UserService {
   /**
    * 注册用户
    */
-  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    const { username, password, nickname, email, avatar, gender } = registerDto;
+  async register(
+    registerDto: RegisterDto,
+    req: RequestWithSession,
+  ): Promise<AuthResponseDto> {
+    const {
+      username,
+      password,
+      nickname = '',
+      email,
+      avatar,
+      gender,
+      captcha,
+    } = registerDto;
+    if (!this.verifyCaptcha(req.session, captcha)) {
+      throw new BadRequestException('验证码错误或已过期');
+    }
 
     // 检查用户名是否已存在
     const existingUserByUsername = await this.userRepository.findOne({
@@ -225,5 +254,47 @@ export class UserService {
   generateToken(user: User): string {
     const payload = { sub: user.id, username: user.username };
     return this.jwtService.sign(payload);
+  }
+
+  /**
+   * 生成图形验证码
+   */
+  getCaptcha(session: SessionData): { data: string } {
+    // 生成验证码
+    const captcha = svgCaptcha.create({
+      size: 4, // 验证码长度
+      ignoreChars: '0o1il', // 忽略容易混淆的字符
+      noise: 3, // 干扰线条数
+      color: true, // 彩色
+      background: '#f0f0f0', // 背景色
+      width: 120,
+      height: 40,
+      fontSize: 50,
+      charPreset: '123456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ', // 字符集
+    });
+
+    // 将验证码存储到 session（转换为小写以便验证时不区分大小写）
+    session.captcha = captcha.text.toLowerCase();
+
+    return {
+      data: captcha.data, // SVG 字符串
+    };
+  }
+
+  /**
+   * 验证验证码
+   */
+  verifyCaptcha(session: SessionData, code: string): boolean {
+    if (!code || !session.captcha) {
+      return false;
+    }
+
+    // 验证码验证（不区分大小写）
+    const isValid = session.captcha === code.toLowerCase();
+
+    // 验证后删除验证码（一次性使用）
+    delete session.captcha;
+
+    return isValid;
   }
 }
