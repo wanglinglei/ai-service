@@ -3,11 +3,9 @@ import {
   Post,
   Body,
   Get,
-  UseGuards,
   Request,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
@@ -44,7 +42,6 @@ export class UserController {
   }
 
   @Get('/profile')
-  @UseGuards(AuthGuard('jwt'))
   async getProfile(@Request() req: Request & { user: { userId: number } }) {
     const user = await this.userService.findById(req.user.userId);
     if (!user) {
