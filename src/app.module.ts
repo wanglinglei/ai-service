@@ -9,6 +9,7 @@ import { VideoModule } from './video/video.module';
 import { ImageModule } from './image/image.module';
 import { UserModule } from './user/user.module';
 import { AlipayAuthModule } from './alipay-auth/alipay-auth.module';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AlipayAuthModule } from './alipay-auth/alipay-auth.module';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
+      namingStrategy: new SnakeNamingStrategy(),
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, // 自动同步数据库表结构（表不存在时自动创建）
     }),
