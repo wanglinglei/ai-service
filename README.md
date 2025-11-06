@@ -25,7 +25,9 @@ ai-service/
 │   ├── app.module.ts              # 根模块
 │   ├── common/                    # 公共模块
 │   │   ├── filters/               # 异常过滤器
-│   │   └── interceptors/          # 响应拦截器
+│   │   ├── interceptors/          # 响应拦截器
+│   │   ├── guards/                # 认证守卫
+│   │   └── config/                # 配置文件
 │   ├── services/                  # 核心服务层
 │   │   ├── http/                  # HTTP 服务抽象层
 │   │   │   ├── serviceRegistry.ts # 服务注册表
@@ -221,18 +223,134 @@ interface ServiceDefinition<TParams, TResponse> {
 
 - **TransformInterceptor**: 统一包装响应格式，自动提取功能名称
 - **HttpExceptionFilter**: 全局异常捕获和统一错误响应
+  - 401 认证错误不输出日志，直接返回给前端
+  - 其他错误正常记录日志和堆栈跟踪
 
 ## 🔐 认证与授权
 
-### JWT 认证
+### 全局 JWT 认证
 
-使用 Passport JWT 策略进行用户认证：
+项目实现了**全局 JWT 认证机制**，所有 API 接口默认需要认证，支持灵活的白名单配置。
+
+#### 认证流程
+
+1. 前端在请求头中携带 JWT Token: `Authorization: Bearer <token>`
+2. 全局 `JwtAuthGuard` 检查路径是否在白名单中
+3. 如果不在白名单，验证 JWT Token
+4. Token 有效则继续，无效则返回 401 错误
+
+#### 前端请求示例
+
+**需要认证的请求**:
+
+```javascript
+// JavaScript/TypeScript
+fetch('http://localhost:3000/ai-service/chat/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer your_jwt_token_here',
+  },
+  body: JSON.stringify({
+    model: 'qwen-plus',
+    messages: [{ role: 'user', content: '你好' }],
+    provider: 'ty',
+  }),
+});
+```
+
+```bash
+# cURL 示例
+curl -X POST http://localhost:3000/ai-service/chat/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token_here" \
+  -d '{
+    "model": "qwen-plus",
+    "messages": [{"role": "user", "content": "你好"}],
+    "provider": "ty"
+  }'
+```
+
+#### 白名单配置
+
+项目支持两种方式配置白名单路径：
+
+**方式一：使用 `@Public()` 装饰器**
+
+在 Controller 或 Handler 上添加 `@Public()` 装饰器，标记该路由不需要认证：
 
 ```typescript
-@UseGuards(AuthGuard('jwt'))
+import { Public } from '../common/guards/jwt-auth.guard';
+
+@Controller('example')
+export class ExampleController {
+  @Public() // 这个路由不需要认证
+  @Get('/public')
+  publicEndpoint() {
+    return '这是公开接口';
+  }
+
+  @Get('/private') // 这个路由需要认证
+  privateEndpoint(@Request() req) {
+    return `用户ID: ${req.user.userId}`;
+  }
+}
+```
+
+**方式二：在配置文件中配置**
+
+编辑 `src/common/config/auth.config.ts`，添加路径到白名单：
+
+```typescript
+export const DEFAULT_WHITELIST: WhitelistConfig = {
+  exact: [
+    '/ai-service/user/register',
+    '/ai-service/user/login',
+    // 添加更多精确匹配的路径...
+  ],
+  prefix: [
+    '/ai-service/public', // 所有 /ai-service/public/* 路径都不需要认证
+  ],
+  regex: [
+    /\/health$/, // 所有以 /health 结尾的路径都不需要认证
+  ],
+};
+```
+
+#### 默认白名单路径
+
+以下路径默认不需要认证：
+
+- `/ai-service/user/register` - 用户注册
+- `/ai-service/user/login` - 用户登录
+- `/ai-service/user/captcha` - 获取验证码
+- 所有 `/health` 健康检查接口
+
+#### 认证错误响应
+
+当认证失败时，返回统一的错误格式：
+
+```json
+{
+  "success": false,
+  "error": "未授权，请先登录",
+  "code": 401,
+  "feature": "chat"
+}
+```
+
+**注意**: 401 认证错误不会在控制台输出日志，直接返回给前端，避免控制台输出过多信息。
+
+#### 在 Controller 中获取用户信息
+
+认证成功后，可以通过 `@Request()` 装饰器获取用户信息：
+
+```typescript
 @Get('/profile')
-async getProfile(@Request() req) {
-  // 访问 req.user.userId 获取用户ID
+async getProfile(@Request() req: Request & { user: { userId: number; username: string } }) {
+  const userId = req.user.userId;
+  const username = req.user.username;
+  // 使用用户信息...
 }
 ```
 
@@ -319,11 +437,12 @@ API 基础路径: `http://localhost:3000/ai-service`
 
 ### 示例请求
 
-**聊天请求**:
+**聊天请求**（需要认证）:
 
 ```bash
 curl -X POST http://localhost:3000/ai-service/chat/chat \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token_here" \
   -d '{
     "model": "qwen-plus",
     "messages": [
@@ -333,7 +452,7 @@ curl -X POST http://localhost:3000/ai-service/chat/chat \
   }'
 ```
 
-**用户注册**:
+**用户注册**（不需要认证，在白名单中）:
 
 ```bash
 curl -X POST http://localhost:3000/ai-service/user/register \
@@ -345,6 +464,25 @@ curl -X POST http://localhost:3000/ai-service/user/register \
     "nickname": "测试用户",
     "captcha": "验证码"
   }'
+```
+
+**用户登录**（不需要认证，在白名单中）:
+
+```bash
+curl -X POST http://localhost:3000/ai-service/user/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "123456",
+    "captcha": "验证码"
+  }'
+```
+
+**获取用户信息**（需要认证）:
+
+```bash
+curl -X GET http://localhost:3000/ai-service/user/profile \
+  -H "Authorization: Bearer your_jwt_token_here"
 ```
 
 ## 🗄️ 数据库设计
