@@ -55,17 +55,17 @@ export class AlipayAuthService {
       throw new BadRequestException('缺少授权码');
     }
 
-    // // 使用auth_code换取access_token
-    // const tokenResult = await this.alipaySdk.exec('alipay.system.oauth.token', {
-    //   grant_type: 'authorization_code',
-    //   code: authCode,
-    // });
+    // 使用auth_code换取access_token
+    const tokenResult = await this.alipaySdk.exec('alipay.system.oauth.token', {
+      grant_type: 'authorization_code',
+      code: authCode,
+    });
 
-    // this.logger.log(`tokenResult: ${JSON.stringify(tokenResult)}`);
+    this.logger.log(`tokenResult: ${JSON.stringify(tokenResult)}`);
 
-    // const { accessToken, openId } = tokenResult;
-    const accessToken = 'authusrBb3720fcbe563483b9ec218202d7afX62';
-    const openId = '20887123456789012345';
+    const { accessToken, openId } = tokenResult;
+    // const accessToken = 'authusrBb3720fcbe563483b9ec218202d7afX62';
+    // const openId = '20887123456789012345';
 
     // 获取用户信息
     const alipayUserInfo = await this.getUserInfo(accessToken);
@@ -129,21 +129,12 @@ export class AlipayAuthService {
       'alipay.user.info.share',
       bizContent,
     );
-    const mockUserInfo = {
-      nick_name: '测试用户',
-      avatar:
-        'https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-112-112.png',
-      gender: 'm',
-      province: '广东省',
-      city: '广州市',
-    };
     this.logger.log(`userInfo: ${JSON.stringify(userInfo)}`);
 
     if (!userInfo) {
       throw new Error('获取用户信息失败：响应格式错误');
     }
 
-    // return userInfo;
-    return mockUserInfo;
+    return userInfo;
   }
 }
