@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { parseDocxWithMammoth, cleanupFile } from './utils/docxParser';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
@@ -8,7 +8,7 @@ export class DocxProcessService {
   async processData(
     rawFile: Express.Multer.File,
     templateJson: string,
-  ): Promise<string> {
+  ): Promise<any> {
     const rawText = await mammoth.extractRawText({ path: rawFile.path });
     const prompt = `
     请从以下原始文档中提取以下字段的信息：
@@ -37,28 +37,22 @@ export class DocxProcessService {
       ],
     };
 
-    const response = await serviceController.executeService(
-      'chat',
-      'chat_ty',
-      body,
-    );
     try {
-      const data = JSON.parse(response.data.content);
-      // @ts-ignore
-      return {
-        success: true,
-        data: data,
-        code: 200,
-        serviceName: 'chat_ty',
-      };
+      const response = await serviceController.executeService(
+        'chat',
+        'chat_ty',
+        body,
+      );
+
+      const data = JSON.parse(response.content);
+      return data;
     } catch (error) {
-      // @ts-ignore
-      return {
-        success: false,
-        data: {},
-        code: 500,
-        serviceName: 'chat_ty',
-      };
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : '文档解析失败',
+      );
     } finally {
       cleanupFile(rawFile.path);
     }

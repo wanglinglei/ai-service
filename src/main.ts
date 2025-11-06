@@ -3,6 +3,8 @@ import * as session from 'express-session';
 
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 // 加载环境变量
 dotenv.config();
@@ -27,6 +29,12 @@ async function bootstrap() {
       },
     }),
   );
+
+  // 注册全局响应拦截器
+  app.useGlobalInterceptors(new TransformInterceptor());
+
+  // 注册全局异常过滤器
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // 配置全局路径前缀
   app.setGlobalPrefix('ai-service');

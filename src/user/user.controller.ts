@@ -29,8 +29,11 @@ export class UserController {
   }
 
   @Post('/register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.userService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Request() req: RequestWithSession,
+  ) {
+    return this.userService.register(registerDto, req);
   }
 
   @Post('/login')
@@ -48,7 +51,7 @@ export class UserController {
 
   @Get('/profile')
   @UseGuards(AuthGuard('jwt'))
-  async getProfile(@Request() req) {
+  async getProfile(@Request() req: Request & { user: { userId: number } }) {
     const user = await this.userService.findById(req.user.userId);
     if (!user) {
       throw new NotFoundException('用户不存在');
