@@ -11,13 +11,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
-
-interface RequestWithSession extends Request {
-  session: {
-    captcha?: string;
-    [key: string]: any;
-  };
-}
+import { Request as ExpressRequest } from 'express';
 
 @Controller('user')
 export class UserController {
@@ -31,19 +25,19 @@ export class UserController {
   @Post('/register')
   async register(
     @Body() registerDto: RegisterDto,
-    @Request() req: RequestWithSession,
+    @Request() req: ExpressRequest,
   ) {
     return this.userService.register(registerDto, req);
   }
 
   @Post('/login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.userService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Request() req: ExpressRequest) {
+    return this.userService.login(loginDto, req);
   }
 
   @Get('/captcha')
-  getCaptcha(@Request() req: RequestWithSession) {
-    const { data } = this.userService.getCaptcha(req.session);
+  async getCaptcha(@Request() req: ExpressRequest) {
+    const { data } = await this.userService.getCaptcha(req.session);
     return {
       image: `data:image/svg+xml;base64,${Buffer.from(data).toString('base64')}`,
     };

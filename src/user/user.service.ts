@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   Request,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,25 +12,15 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as svgCaptcha from 'svg-captcha';
+import { Request as ExpressRequest } from 'express';
 import { User, UserSource, Gender, UserStatus } from './entitys/user.entity';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
 import { AuthResponseDto } from './DTO/authResponseDto';
 
-interface SessionData {
-  captcha?: string;
-  [key: string]: any;
-}
-
-interface RequestWithSession extends Request {
-  session: {
-    captcha?: string;
-    [key: string]: any;
-  };
-}
-
 @Injectable()
 export class UserService {
+  private logger = new Logger(UserService.name);
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -41,7 +32,7 @@ export class UserService {
    */
   async register(
     registerDto: RegisterDto,
-    req: RequestWithSession,
+    req: ExpressRequest,
   ): Promise<AuthResponseDto> {
     const {
       username,
@@ -122,8 +113,15 @@ export class UserService {
   /**
    * 用户登录
    */
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const { username, password } = loginDto;
+  async login(
+    loginDto: LoginDto,
+    req: ExpressRequest,
+  ): Promise<AuthResponseDto> {
+    const { username, password, captcha } = loginDto;
+
+    if (!this.verifyCaptcha(req.session, captcha)) {
+      throw new BadRequestException('验证码错误或已过期');
+    }
 
     // 查找用户
     const user = await this.userRepository.findOne({
@@ -259,7 +257,13 @@ export class UserService {
   /**
    * 生成图形验证码
    */
-  getCaptcha(session: SessionData): { data: string } {
+  async getCaptcha(
+    session: ExpressRequest['session'],
+  ): Promise<{ data: string }> {
+    if (!session) {
+      throw new Error('Session is not available');
+    }
+
     // 生成验证码
     const captcha = svgCaptcha.create({
       size: 4, // 验证码长度
@@ -274,26 +278,63 @@ export class UserService {
     });
 
     // 将验证码存储到 session（转换为小写以便验证时不区分大小写）
-    session.captcha = captcha.text.toLowerCase();
+    (session as any).captcha = captcha.text.toLowerCase();
 
-    return {
-      data: captcha.data, // SVG 字符串
-    };
+    // 记录 session ID 和验证码，用于调试
+    this.logger.log(
+      `Captcha generated: ${(session as any).captcha}, sessionID: ${(session as any).id || 'unknown'}`,
+    );
+
+    // 确保 session 被标记为已修改，以便保存
+    // 使用 Promise 确保 session 保存完成后再返回
+    return new Promise((resolve, reject) => {
+      session.save((err) => {
+        if (err) {
+          this.logger.error('Session save error:', err);
+          reject(err);
+        } else {
+          this.logger.log('Session saved successfully');
+          resolve({
+            data: captcha.data, // SVG 字符串
+          });
+        }
+      });
+    });
   }
 
   /**
    * 验证验证码
    */
-  verifyCaptcha(session: SessionData, code: string): boolean {
-    if (!code || !session.captcha) {
+  verifyCaptcha(session: ExpressRequest['session'], code: string): boolean {
+    if (!session) {
+      this.logger.warn('Session is not available');
+      return false;
+    }
+
+    const sessionCaptcha = (session as any).captcha;
+    const sessionId = (session as any).id || 'unknown';
+    this.logger.log(
+      `verifyCaptcha: code=${code}, session.captcha=${sessionCaptcha}, sessionID=${sessionId}`,
+    );
+    if (!code || !sessionCaptcha) {
+      this.logger.warn(
+        `Captcha verification failed: code=${code}, session.captcha=${sessionCaptcha}, sessionID=${sessionId}`,
+      );
       return false;
     }
 
     // 验证码验证（不区分大小写）
-    const isValid = session.captcha === code.toLowerCase();
+    const isValid = sessionCaptcha === code.toLowerCase();
 
     // 验证后删除验证码（一次性使用）
-    delete session.captcha;
+    delete (session as any).captcha;
+
+    // 确保 session 被标记为已修改
+    session.save((err) => {
+      if (err) {
+        this.logger.error('Session save error after verification:', err);
+      }
+    });
 
     return isValid;
   }
