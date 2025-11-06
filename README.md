@@ -1,98 +1,485 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AI Service 项目说明文档
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 📋 项目概述
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+AI Service 是一个基于 NestJS 框架构建的 AI 服务聚合平台，提供统一的 API 接口来访问多个 AI 服务提供商的能力。项目采用模块化设计，支持聊天、视频生成、图片生成、文档处理等多种 AI 功能，并实现了灵活的服务注册与执行机制。
 
-## Description
+## 🏗️ 技术架构
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 核心技术栈
 
-## Project setup
+- **框架**: NestJS 11.x
+- **数据库**: MySQL (TypeORM)
+- **认证**: JWT + Passport
+- **会话管理**: Express Session
+- **文件上传**: Multer
+- **文档处理**: Mammoth (Word 文档解析)
+- **包管理**: pnpm
 
-```bash
-$ pnpm install
+### 项目结构
+
+```
+ai-service/
+├── src/
+│   ├── main.ts                    # 应用入口文件
+│   ├── app.module.ts              # 根模块
+│   ├── common/                    # 公共模块
+│   │   ├── filters/               # 异常过滤器
+│   │   └── interceptors/          # 响应拦截器
+│   ├── services/                  # 核心服务层
+│   │   ├── http/                  # HTTP 服务抽象层
+│   │   │   ├── serviceRegistry.ts # 服务注册表
+│   │   │   ├── serviceExecutor.ts # 服务执行器
+│   │   │   └── baseFetch.ts       # 基础 HTTP 请求
+│   │   ├── baseServices/          # 服务基类
+│   │   │   ├── glmBaseService.ts  # GLM 服务基类
+│   │   │   └── tyBaseService.ts   # 通义千问服务基类
+│   │   ├── chat/                  # 聊天服务实现
+│   │   ├── video/                 # 视频生成服务实现
+│   │   ├── image/                 # 图片生成服务实现
+│   │   └── index.ts               # 服务导出入口
+│   ├── chat/                      # 聊天模块
+│   ├── video/                     # 视频生成模块
+│   ├── image/                     # 图片生成模块
+│   ├── docx-process/              # 文档处理模块
+│   ├── user/                      # 用户管理模块
+│   └── alipay-auth/               # 支付宝认证模块
+├── dist/                          # 编译输出目录
+├── uploads/                       # 文件上传目录
+└── test/                          # 测试文件
 ```
 
-## Compile and run the project
+## 🎯 核心功能模块
 
-```bash
-# development
-$ pnpm run start
+### 1. 聊天服务 (Chat)
 
-# watch mode
-$ pnpm run start:dev
+提供多模型 AI 聊天能力，支持 GLM 和通义千问两个服务提供商。
 
-# production mode
-$ pnpm run start:prod
+**API 端点**:
+
+- `POST /ai-service/chat/chat` - 发送聊天消息
+
+**支持的服务提供商**:
+
+- `chat_glm` - GLM 模型（默认模型: glm-4.5）
+- `chat_ty` - 通义千问模型（默认模型: qwen-plus）
+
+**请求示例**:
+
+```json
+{
+  "model": "qwen-plus",
+  "messages": [{ "role": "user", "content": "你好" }],
+  "provider": "ty"
+}
 ```
 
-## Run tests
+### 2. 视频生成服务 (Video)
 
-```bash
-# unit tests
-$ pnpm run test
+支持基于文本生成视频的功能。
 
-# e2e tests
-$ pnpm run test:e2e
+**API 端点**:
 
-# test coverage
-$ pnpm run test:cov
+- `POST /ai-service/video/generate` - 生成视频
+
+**支持的服务提供商**:
+
+- `video_glm` - GLM 视频生成服务
+- `video_ty` - 通义千问视频生成服务
+
+### 3. 图片生成服务 (Image)
+
+提供 AI 图片生成能力。
+
+**支持的服务提供商**:
+
+- `image_glm` - GLM 图片生成服务
+- `image_ty` - 通义千问图片生成服务
+
+### 4. 文档处理服务 (DocxProcess)
+
+智能解析 Word 文档并提取结构化数据。
+
+**API 端点**:
+
+- `POST /ai-service/docx-process/processData` - 处理文档
+
+**功能特点**:
+
+- 支持 `.docx` 格式文件上传
+- 基于 AI 模型智能提取文档字段
+- 返回结构化 JSON 数据
+
+**请求示例**:
+
+```json
+{
+  "templateJson": "{\"name\": \"姓名\", \"age\": \"年龄\"}"
+}
 ```
 
-## Deployment
+文件通过 `multipart/form-data` 上传，字段名为 `rawDocument`。
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 5. 用户管理模块 (User)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+提供用户注册、登录、认证等功能。
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+**API 端点**:
+
+- `POST /ai-service/user/register` - 用户注册
+- `POST /ai-service/user/login` - 用户登录
+- `GET /ai-service/user/captcha` - 获取验证码
+- `GET /ai-service/user/profile` - 获取用户信息（需认证）
+
+**功能特点**:
+
+- JWT Token 认证
+- Session 会话管理
+- 密码加密存储（bcrypt）
+- 图形验证码生成
+
+### 6. 支付宝认证模块 (AlipayAuth)
+
+支持支付宝小程序/应用的 OAuth 认证。
+
+**API 端点**:
+
+- `POST /ai-service/alipay-auth/login` - 通过 authCode 登录
+- `POST /ai-service/alipay-auth/getUserInfo` - 获取用户信息
+
+## 🔧 核心架构设计
+
+### 服务注册与执行机制
+
+项目采用**服务注册表模式**（Service Registry Pattern），实现了灵活的多服务提供商管理机制。
+
+#### 1. 服务注册表 (ServiceRegistry)
+
+负责管理和注册所有可用的 AI 服务：
+
+```typescript
+// 服务注册
+serviceRegistry.registerService(new GlmChatService());
+serviceRegistry.registerService(new TyChatService());
+
+// 配置功能-服务映射
+serviceRegistry.configureFeatureServices({
+  chat: [
+    { label: 'GLM', value: 'chat_glm' },
+    { label: '通义千问', value: 'chat_ty' },
+  ],
+});
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+#### 2. 服务执行器 (ServiceExecutor)
 
-## Resources
+负责执行指定的服务，并支持服务降级机制：
 
-Check out a few resources that may come in handy when working with NestJS:
+- **主服务执行**: 执行用户选择的服务
+- **降级机制**: 主服务失败时自动尝试备用服务
+- **错误处理**: 统一的错误处理和日志记录
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+#### 3. 服务定义接口
 
-## Support
+所有服务必须实现 `ServiceDefinition` 接口：
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```typescript
+interface ServiceDefinition<TParams, TResponse> {
+  name: string;
+  execute: (params: TParams) => Promise<TResponse>;
+  validate?: (params: TParams) => boolean;
+}
+```
 
-## Stay in touch
+### 统一响应格式
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+所有 API 响应都遵循统一的格式：
 
-## License
+**成功响应**:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```json
+{
+  "success": true,
+  "data": { ... },
+  "code": 200,
+  "feature": "chat"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "success": false,
+  "error": "错误信息",
+  "code": 400,
+  "feature": "chat"
+}
+```
+
+### 全局拦截器与过滤器
+
+- **TransformInterceptor**: 统一包装响应格式，自动提取功能名称
+- **HttpExceptionFilter**: 全局异常捕获和统一错误响应
+
+## 🔐 认证与授权
+
+### JWT 认证
+
+使用 Passport JWT 策略进行用户认证：
+
+```typescript
+@UseGuards(AuthGuard('jwt'))
+@Get('/profile')
+async getProfile(@Request() req) {
+  // 访问 req.user.userId 获取用户ID
+}
+```
+
+### Session 管理
+
+- Session 存储: 内存存储（可配置为 Redis）
+- Cookie 配置: HttpOnly, 3分钟过期
+- CORS 支持: 支持跨域请求，可配置前端地址
+
+## 📦 环境配置
+
+### 必需的环境变量
+
+创建 `.env` 文件并配置以下变量：
+
+```env
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=your_password
+DB_NAME=ai_service
+
+# JWT 配置
+JWT_SECRET=your_jwt_secret_key
+
+# Session 配置
+SESSION_SECRET=your_session_secret_key
+
+# AI 服务 API Keys
+GLM_API_KEY=your_glm_api_key
+TY_API_KEY=your_ty_api_key
+
+# 应用配置
+PORT=3000
+FRONTEND_ORIGIN=http://localhost:5173
+NODE_ENV=development
+```
+
+## 🚀 快速开始
+
+### 1. 安装依赖
+
+```bash
+pnpm install
+```
+
+### 2. 配置环境变量
+
+复制 `.env.example` 为 `.env` 并填写配置。
+
+### 3. 启动数据库
+
+确保 MySQL 服务已启动，数据库会自动同步表结构。
+
+### 4. 启动开发服务器
+
+```bash
+# 开发模式（热重载）
+pnpm run start:dev
+
+# 生产模式
+pnpm run build
+pnpm run start:prod
+```
+
+### 5. 访问应用
+
+应用启动后访问: `http://localhost:3000`
+
+API 基础路径: `http://localhost:3000/ai-service`
+
+## 📝 API 文档
+
+### 基础路径
+
+所有 API 都使用统一的前缀: `/ai-service`
+
+### 健康检查
+
+所有模块都提供健康检查端点:
+
+- `GET /ai-service/{module}/health` - 返回 `"ok"`
+
+### 示例请求
+
+**聊天请求**:
+
+```bash
+curl -X POST http://localhost:3000/ai-service/chat/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen-plus",
+    "messages": [
+      {"role": "user", "content": "你好"}
+    ],
+    "provider": "ty"
+  }'
+```
+
+**用户注册**:
+
+```bash
+curl -X POST http://localhost:3000/ai-service/user/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "123456",
+    "email": "test@example.com",
+    "nickname": "测试用户",
+    "captcha": "验证码"
+  }'
+```
+
+## 🗄️ 数据库设计
+
+### User 实体
+
+用户表包含以下字段：
+
+- `id`: 主键
+- `username`: 用户名（唯一）
+- `email`: 邮箱（唯一，可选）
+- `password`: 加密密码
+- `nickname`: 昵称
+- `avatar`: 头像 URL
+- `province`: 省份
+- `city`: 城市
+- `source`: 用户来源（wechat/alipay/web/other）
+- `status`: 用户状态（enabled/disabled）
+- `gender`: 性别（male/female/unknown）
+- `sourceUserId`: 来源用户ID
+- `createdAt`: 创建时间
+- `updatedAt`: 更新时间
+
+数据库使用 TypeORM 的 `synchronize: true` 模式，会自动同步表结构。
+
+## 🔄 服务扩展指南
+
+### 添加新的 AI 服务提供商
+
+1. **创建服务基类**（如需要）:
+
+```typescript
+export abstract class NewBaseService {
+  protected readonly API_KEY: string;
+  protected readonly API_URL: string;
+  // ...
+}
+```
+
+2. **实现服务类**:
+
+```typescript
+export class NewChatService
+  extends NewBaseService
+  implements ChatServiceDefinition
+{
+  name: ChatServiceName = 'chat_new';
+
+  async execute(params: ChatRequestParams): Promise<ChatMessage> {
+    // 实现服务逻辑
+  }
+}
+```
+
+3. **注册服务**:
+   在 `src/services/index.ts` 中注册新服务：
+
+```typescript
+serviceRegistry.registerService(new NewChatService());
+serviceRegistry.configureFeatureServices({
+  chat: [{ label: '新服务', value: 'chat_new' }],
+});
+```
+
+### 添加新功能模块
+
+1. 创建模块目录和文件（Controller, Service, Module）
+2. 在 `app.module.ts` 中导入新模块
+3. 如需使用服务层，在服务层添加对应的服务实现
+
+## 🧪 测试
+
+```bash
+# 单元测试
+pnpm run test
+
+# 测试覆盖率
+pnpm run test:cov
+
+# E2E 测试
+pnpm run test:e2e
+```
+
+## 📦 构建与部署
+
+### 构建项目
+
+```bash
+pnpm run build
+```
+
+构建产物位于 `dist/` 目录。
+
+### 生产部署
+
+项目支持通过 GitHub Actions 自动部署，详见 `.github/DEPLOY.md`。
+
+手动部署步骤：
+
+1. 构建项目: `pnpm run build`
+2. 复制 `.env` 文件到 `dist/` 目录
+3. 安装生产依赖: `cd dist && pnpm install --prod`
+4. 启动应用: `node dist/main.js`
+
+推荐使用 PM2 进行进程管理：
+
+```bash
+pm2 start dist/main.js --name ai-service
+```
+
+## 🛠️ 开发规范
+
+### 代码风格
+
+- 使用 ESLint + Prettier 进行代码格式化
+- 遵循 NestJS 官方代码风格指南
+- 使用 TypeScript 严格模式
+
+### 提交规范
+
+- 使用有意义的提交信息
+- 遵循 Conventional Commits 规范
+
+## 📄 许可证
+
+UNLICENSED - 私有项目
+
+## 👥 贡献
+
+本项目为私有项目，暂不接受外部贡献。
+
+## 📞 联系方式
+
+如有问题或建议，请联系项目维护者。
+
+---
+
+**最后更新**: 2024年
