@@ -64,6 +64,13 @@ jobs:
           ENV_NODE_ENV: ${{ secrets.ENV_NODE_ENV }}
           ENV_GLM_API_KEY: ${{ secrets.ENV_GLM_API_KEY }}
           ENV_TY_API_KEY: ${{ secrets.ENV_TY_API_KEY }}
+          ENV_DB_HOST: ${{ secrets.ENV_DB_HOST }}
+          ENV_DB_PORT: ${{ secrets.ENV_DB_PORT }}
+          ENV_DB_USERNAME: ${{ secrets.ENV_DB_USERNAME }}
+          ENV_DB_PASSWORD: ${{ secrets.ENV_DB_PASSWORD }}
+          ENV_DB_NAME: ${{ secrets.ENV_DB_NAME }}
+          ENV_APP_PRIVATE_KEY: ${{ secrets.ENV_APP_PRIVATE_KEY }}
+          ENV_ALIPAY_PUBLIC_KEY: ${{ secrets.ENV_ALIPAY_PUBLIC_KEY }}
         run: |
           # 上传部署文件
           echo "正在上传部署文件到服务器..."
@@ -105,6 +112,13 @@ jobs:
             echo "PORT=${ENV_PORT:-3000}"
             echo "GLM_API_KEY=${ENV_GLM_API_KEY}"
             echo "TY_API_KEY=${ENV_TY_API_KEY}"
+            echo "DB_HOST=${ENV_DB_HOST}"
+            echo "DB_PORT=${ENV_DB_PORT}"
+            echo "DB_USERNAME=${ENV_DB_USERNAME}"
+            echo "DB_PASSWORD=${ENV_DB_PASSWORD}"
+            echo "DB_NAME=${ENV_DB_NAME}"
+            echo "APP_PRIVATE_KEY=${ENV_APP_PRIVATE_KEY}"
+            echo "ALIPAY_PUBLIC_KEY=${ENV_ALIPAY_PUBLIC_KEY}"
           } > .env
           scp .env ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
           rm -f .env

@@ -51,70 +51,79 @@ export class AlipayAuthService {
    * 通过authCode登录，获取用户信息和token（前端调用）
    */
   async loginByAuthCode(authCode: string): Promise<AuthCallbackResult> {
-    if (!authCode) {
-      throw new BadRequestException('缺少授权码');
-    }
-
-    // 使用auth_code换取access_token
-    const tokenResult = await this.alipaySdk.exec('alipay.system.oauth.token', {
-      grant_type: 'authorization_code',
-      code: authCode,
-    });
-
-    this.logger.log(`tokenResult: ${JSON.stringify(tokenResult)}`);
-
-    const { accessToken, openId } = tokenResult;
-    // const accessToken = 'authusrBb3720fcbe563483b9ec218202d7afX62';
-    // const openId = '20887123456789012345';
-
-    // 获取用户信息
-    const alipayUserInfo = await this.getUserInfo(accessToken);
-
-    // 查找或创建用户
-    let user = await this.userService.findBySourceUserId(openId);
-    this.logger.log(`user: ${JSON.stringify(user)}`);
-    const { nick_name, avatar, gender, province, city } = alipayUserInfo;
-
-    if (!user) {
-      // 创建新用户
-      const username = `alipay_${openId}`;
-      const nickname = nick_name || `支付宝用户${openId.slice(-8)}`;
-
-      user = await this.userService.createAlipayUser({
-        username,
-        nickname,
-        alipayUserId: openId,
-        avatar,
-        gender: gender === 'm' ? 'male' : gender === 'f' ? 'female' : 'unknown',
-        province,
-        city,
-      });
-    } else {
-      // 更新用户信息
-      if (alipayUserInfo.nick_name) {
-        user.nickname = alipayUserInfo.nick_name;
+    try {
+      if (!authCode) {
+        throw new BadRequestException('缺少授权码');
       }
-      if (alipayUserInfo.avatar) {
-        user.avatar = alipayUserInfo.avatar;
+
+      // 使用auth_code换取access_token
+      const tokenResult = await this.alipaySdk.exec(
+        'alipay.system.oauth.token',
+        {
+          grant_type: 'authorization_code',
+          code: authCode,
+        },
+      );
+
+      this.logger.log(`tokenResult: ${JSON.stringify(tokenResult)}`);
+
+      const { accessToken, openId } = tokenResult;
+      // const accessToken = 'authusrBb3720fcbe563483b9ec218202d7afX62';
+      // const openId = '20887123456789012345';
+
+      // 获取用户信息
+      const alipayUserInfo = await this.getUserInfo(accessToken);
+
+      // 查找或创建用户
+      let user = await this.userService.findBySourceUserId(openId);
+      this.logger.log(`user: ${JSON.stringify(user)}`);
+      const { nick_name, avatar, gender, province, city } = alipayUserInfo;
+
+      if (!user) {
+        // 创建新用户
+        const username = `alipay_${openId}`;
+        const nickname = nick_name || `支付宝用户${openId.slice(-8)}`;
+
+        user = await this.userService.createAlipayUser({
+          username,
+          nickname,
+          alipayUserId: openId,
+          avatar,
+          gender:
+            gender === 'm' ? 'male' : gender === 'f' ? 'female' : 'unknown',
+          province,
+          city,
+        });
+      } else {
+        // 更新用户信息
+        if (alipayUserInfo.nick_name) {
+          user.nickname = alipayUserInfo.nick_name;
+        }
+        if (alipayUserInfo.avatar) {
+          user.avatar = alipayUserInfo.avatar;
+        }
+        await this.userService.updateUser(user);
       }
-      await this.userService.updateUser(user);
+
+      // 生成JWT token
+      const jwtToken = this.userService.generateToken(user);
+
+      return {
+        accessToken: jwtToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          email: user.email,
+          avatar: user.avatar,
+          province: user.province,
+          city: user.city,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`loginByAuthCode error: ${error}`);
+      throw new BadRequestException('登录失败');
     }
-
-    // 生成JWT token
-    const jwtToken = this.userService.generateToken(user);
-
-    return {
-      accessToken: jwtToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        email: user.email,
-        avatar: user.avatar,
-        province: user.province,
-        city: user.city,
-      },
-    };
   }
 
   /**
