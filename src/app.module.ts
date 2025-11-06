@@ -8,6 +8,7 @@ import { ChatModule } from './chat/chat.module';
 import { VideoModule } from './video/video.module';
 import { ImageModule } from './image/image.module';
 import { UserModule } from './user/user.module';
+import { AlipayAuthModule } from './alipay-auth/alipay-auth.module';
 
 @Module({
   imports: [
@@ -19,13 +20,14 @@ import { UserModule } from './user/user.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV === 'development',
+      synchronize: true, // 自动同步数据库表结构（表不存在时自动创建）
     }),
     DocxProcessModule,
     ChatModule,
     VideoModule,
     ImageModule,
     UserModule,
+    AlipayAuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

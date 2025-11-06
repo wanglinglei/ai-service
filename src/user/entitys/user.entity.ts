@@ -34,7 +34,7 @@ export class User {
 
   @Column({
     type: 'varchar',
-    length: 50,
+    length: 10,
     unique: true,
     comment: '用户名',
   })
@@ -42,7 +42,7 @@ export class User {
 
   @Column({
     type: 'varchar',
-    length: 100,
+    length: 20,
     nullable: true,
     unique: true,
     comment: '邮箱',
@@ -58,18 +58,34 @@ export class User {
 
   @Column({
     type: 'varchar',
-    length: 100,
+    length: 10,
     comment: '用户昵称',
   })
   nickname: string;
 
   @Column({
     type: 'varchar',
-    length: 500,
+    length: 100,
     nullable: true,
     comment: '用户头像URL',
   })
   avatar: string;
+
+  @Column({
+    type: 'varchar',
+    length: 10,
+    nullable: true,
+    comment: '省份',
+  })
+  province: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    comment: '城市',
+  })
+  city: string;
 
   @Column({
     type: 'enum',
@@ -97,19 +113,11 @@ export class User {
 
   @Column({
     type: 'varchar',
-    length: 100,
+    length: 20,
     nullable: true,
-    comment: '微信用户ID',
+    comment: '来源用户ID',
   })
-  wechatUserId: string;
-
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-    comment: '支付宝用户ID',
-  })
-  alipayUserId: string;
+  sourceUserId: string;
 
   @CreateDateColumn({
     type: 'timestamp',

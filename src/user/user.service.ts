@@ -7,7 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User, UserSource, Gender, UserStatus } from './user.entity';
+import * as crypto from 'crypto';
+import { User, UserSource, Gender, UserStatus } from './entitys/user.entity';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
 import { AuthResponseDto } from './DTO/authResponseDto';
@@ -167,9 +168,61 @@ export class UserService {
   }
 
   /**
+   * 根据支付宝用户ID查找用户
+   */
+  async findBySourceUserId(sourceUserId: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { sourceUserId: sourceUserId },
+    });
+  }
+
+  /**
+   * 创建支付宝用户
+   */
+  async createAlipayUser(userData: {
+    username: string;
+    nickname: string;
+    alipayUserId: string;
+    avatar?: string;
+    gender?: 'male' | 'female' | 'unknown';
+    province?: string;
+    city?: string;
+  }): Promise<User> {
+    let genderEnum: Gender = Gender.UNKNOWN;
+    if (userData.gender) {
+      if (userData.gender === 'male') {
+        genderEnum = Gender.MALE;
+      } else if (userData.gender === 'female') {
+        genderEnum = Gender.FEMALE;
+      }
+    }
+
+    const user = this.userRepository.create({
+      username: userData.username,
+      password: await this.hashPassword(crypto.randomBytes(16).toString('hex')), // 随机密码
+      nickname: userData.nickname,
+      avatar: userData.avatar,
+      gender: genderEnum,
+      source: UserSource.ALIPAY,
+      sourceUserId: userData.alipayUserId,
+      province: userData.province,
+      city: userData.city,
+    });
+
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * 更新用户信息
+   */
+  async updateUser(user: User): Promise<User> {
+    return this.userRepository.save(user);
+  }
+
+  /**
    * 生成 JWT token
    */
-  private generateToken(user: User): string {
+  generateToken(user: User): string {
     const payload = { sub: user.id, username: user.username };
     return this.jwtService.sign(payload);
   }

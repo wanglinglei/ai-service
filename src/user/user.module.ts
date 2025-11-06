@@ -4,7 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { User } from './user.entity';
+import { User } from './entitys/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
