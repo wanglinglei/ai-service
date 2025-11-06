@@ -88,7 +88,9 @@ export class UserService {
       password: hashedPassword,
       nickname,
       email,
-      avatar,
+      avatar:
+        avatar ||
+        'https://p3-passport.byteacctimg.com/img/user-avatar/5a3f65c1808beb286a51c56d7a0903b4~80x80.awebp',
       gender: genderEnum,
       source: UserSource.WEB,
     });
