@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
   Request,
   Logger,
 } from '@nestjs/common';
@@ -13,9 +14,8 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Request as ExpressRequest } from 'express';
 import { User, UserSource, Gender, UserStatus } from './entitys/user.entity';
-import { RegisterDto } from './DTO/registerDto';
-import { LoginDto } from './DTO/loginDto';
-import { AuthResponseDto } from './DTO/authResponseDto';
+import { RegisterDto, UpdateUserDto, LoginDto, AuthResponseDto } from './DTO';
+
 import { GeneralService } from '../general/general.service';
 
 @Injectable()
@@ -163,6 +163,41 @@ export class UserService {
         avatar: user.avatar,
       },
     };
+  }
+
+  /**
+   * 更新用户信息
+   */
+  async update(updateDto: UpdateUserDto): Promise<User> {
+    const { id, username, email, ...rest } = updateDto;
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+    // 检查用户名是否已存在
+    const existingUserByUsername = await this.userRepository.findOne({
+      where: { username },
+    });
+
+    if (existingUserByUsername) {
+      throw new ConflictException('用户名已存在');
+    }
+
+    // 如果提供了邮箱，检查邮箱是否已被注册
+    if (email) {
+      const existingUserByEmail = await this.userRepository.findOne({
+        where: { email },
+      });
+
+      if (existingUserByEmail) {
+        throw new ConflictException('邮箱已被注册');
+      }
+    }
+    const updateUser: User = {
+      ...user,
+      ...updateDto,
+    };
+    return this.userRepository.save(updateUser);
   }
 
   /**
