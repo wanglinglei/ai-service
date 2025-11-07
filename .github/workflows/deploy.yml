@@ -72,6 +72,8 @@ jobs:
           ENV_APP_PRIVATE_KEY: ${{ secrets.ENV_APP_PRIVATE_KEY }}
           ENV_ALIPAY_PUBLIC_KEY: ${{ secrets.ENV_ALIPAY_PUBLIC_KEY }}
           ENV_FRONTEND_ORIGIN: ${{ secrets.ENV_FRONTEND_ORIGIN }}
+          ENV_COS_SECRET_ID: ${{ secrets.ENV_COS_SECRET_ID }}
+          ENV_COS_SECRET_KEY: ${{ secrets.ENV_COS_SECRET_KEY }}
         run: |
           # 上传部署文件
           echo "正在上传部署文件到服务器..."
@@ -121,6 +123,8 @@ jobs:
             echo "APP_PRIVATE_KEY=${ENV_APP_PRIVATE_KEY}"
             echo "ALIPAY_PUBLIC_KEY=${ENV_ALIPAY_PUBLIC_KEY}"
             echo "FRONTEND_ORIGIN=${ENV_FRONTEND_ORIGIN}"
+            echo "COS_SECRET_ID=${ENV_COS_SECRET_ID}"
+            echo "COS_SECRET_KEY=${ENV_COS_SECRET_KEY}"
           } > .env
           scp .env ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
           rm -f .env

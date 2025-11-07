@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import * as svgCaptcha from 'svg-captcha';
 import { Request as ExpressRequest } from 'express';
+import { CosService, UploadImageResult } from '../lib/cosService';
 
 @Injectable()
 export class GeneralService {
   private readonly logger = new Logger(GeneralService.name);
+
+  constructor(private readonly cosService: CosService) {}
 
   /**
    * 生成图形验证码
@@ -89,5 +92,56 @@ export class GeneralService {
     });
 
     return isValid;
+  }
+
+  /**
+   * 上传文件到腾讯云COS
+   * @param file - multer 处理后的文件对象
+   * @param prefix - 文件前缀，默认为 'general'
+   * @returns 上传结果，包含图片链接
+   */
+  async upload(
+    file: Express.Multer.File,
+    prefix: string = 'general',
+  ): Promise<{ url: string; key: string }> {
+    if (!file) {
+      throw new BadRequestException('文件不能为空');
+    }
+
+    // 验证文件类型（仅允许图片）
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml',
+    ];
+
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `不支持的文件类型: ${file.mimetype}，仅支持图片格式`,
+      );
+    }
+
+    // 验证文件大小（限制为 10MB）
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('文件大小不能超过 10MB');
+    }
+
+    try {
+      const result: UploadImageResult = await this.cosService.uploadFile(file);
+
+      return {
+        url: result.publicUrl,
+        key: result.key,
+      };
+    } catch (error) {
+      this.logger.error('文件上传失败:', error);
+      throw new BadRequestException(
+        error instanceof Error ? error.message : '文件上传失败',
+      );
+    }
   }
 }

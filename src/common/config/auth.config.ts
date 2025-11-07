@@ -28,6 +28,7 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     '/ai-service/user/login',
     // 通用接口
     '/ai-service/general/captcha',
+    '/ai-service/general/upload',
     // 健康检查接口
     '/ai-service/chat/health',
     '/ai-service/video/health',
