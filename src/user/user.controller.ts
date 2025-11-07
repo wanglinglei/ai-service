@@ -10,6 +10,7 @@ import { UserService } from './user.service';
 import { RegisterDto } from './DTO/registerDto';
 import { LoginDto } from './DTO/loginDto';
 import { Request as ExpressRequest } from 'express';
+import { JwtUser } from '../common/guards/jwt-auth.guard';
 
 @Controller('user')
 export class UserController {
@@ -42,7 +43,7 @@ export class UserController {
   }
 
   @Get('/profile')
-  async getProfile(@Request() req: Request & { user: { userId: number } }) {
+  async getProfile(@Request() req: ExpressRequest & { user: JwtUser }) {
     const user = await this.userService.findById(req.user.userId);
     if (!user) {
       throw new NotFoundException('用户不存在');
@@ -56,6 +57,7 @@ export class UserController {
       gender: user.gender,
       source: user.source,
       status: user.status,
+      authScope: user.authScope,
       createdAt: user.createdAt,
     };
   }

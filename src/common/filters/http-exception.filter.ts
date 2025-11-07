@@ -59,8 +59,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const feature = this.extractFeature(route);
 
     // 记录错误日志
-    // 对于认证错误（401），不记录日志，直接返回给前端
-    if (status !== HttpStatus.UNAUTHORIZED) {
+    // 对于认证错误（401）和权限错误（403），不记录日志，直接返回给前端
+    if (
+      status !== HttpStatus.UNAUTHORIZED &&
+      status !== HttpStatus.FORBIDDEN
+    ) {
       this.logger.error(
         `HTTP ${status} Error: ${message}`,
         exception instanceof Error ? exception.stack : undefined,

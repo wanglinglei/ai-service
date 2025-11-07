@@ -22,6 +22,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.status === UserStatus.DISABLED) {
       throw new UnauthorizedException('账户已被禁用');
     }
-    return { userId: user.id, username: user.username };
+    return {
+      userId: user.id,
+      username: user.username,
+      authScope: user.authScope || '', // 默认权限范围
+    };
   }
 }
