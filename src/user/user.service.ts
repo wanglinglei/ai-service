@@ -250,10 +250,16 @@ export class UserService {
 
   /**
    * 生成 JWT token
+   * @param user 用户对象
+   * @param expiresIn 有效期，默认从环境变量 JWT_EXPIRES_IN 读取，或使用 '1d'
+   * 有效期格式支持：'1d' (1天), '2h' (2小时), '30m' (30分钟), '60s' (60秒) 等
    */
-  generateToken(user: User): string {
-    const payload = { sub: user.id, username: user.username };
-    return this.jwtService.sign(payload);
+  generateToken(user: User, expiresIn?: string): string {
+    const payload = { sub: user.id };
+    const expires = expiresIn || process.env.JWT_EXPIRES_IN || '1d';
+    return this.jwtService.sign(payload, {
+      expiresIn: expires,
+    } as any);
   }
 
   /**

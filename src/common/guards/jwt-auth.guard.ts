@@ -83,8 +83,33 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _status?: any,
   ): TUser {
-    if (err || !user) {
-      throw err || new UnauthorizedException('未授权，请先登录');
+    // 处理 token 过期错误
+    if (err) {
+      // TokenExpiredError 是 jsonwebtoken 库抛出的过期错误
+      // 使用类型守卫安全地访问错误属性
+      const isExpiredError =
+        (err &&
+          typeof err === 'object' &&
+          'name' in err &&
+          (err as { name?: string }).name === 'TokenExpiredError') ||
+        (err &&
+          typeof err === 'object' &&
+          'message' in err &&
+          typeof (err as { message?: unknown }).message === 'string' &&
+          ((err as { message: string }).message.includes('expired') ||
+            (err as { message: string }).message.includes('过期')));
+
+      if (isExpiredError) {
+        throw new UnauthorizedException('Token 已过期，请重新登录');
+      }
+      // 其他认证错误
+      throw err instanceof UnauthorizedException
+        ? err
+        : new UnauthorizedException('未授权，请先登录');
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('未授权，请先登录');
     }
 
     // 认证成功后，检查用户权限

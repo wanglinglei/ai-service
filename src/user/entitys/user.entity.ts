@@ -36,7 +36,9 @@ export class User {
     type: 'varchar',
     length: 10,
     unique: true,
+    nullable: true,
     comment: '用户名',
+    default: '',
   })
   username: string;
 
