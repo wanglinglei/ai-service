@@ -12,6 +12,8 @@ import { UserModule } from './user/user.module';
 import { AlipayAuthModule } from './alipay-auth/alipay-auth.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { CommonModule } from './common/common.module';
+import { GeneralModule } from './general/general.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     ImageModule,
     UserModule,
     AlipayAuthModule,
+    CommonModule,
+    GeneralModule,
   ],
   controllers: [AppController],
   providers: [

@@ -6,6 +6,7 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { User } from './entitys/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GeneralModule } from '../general/general.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '1d' },
     }),
+    GeneralModule, // 导入 GeneralModule 以使用 GeneralService
   ],
   controllers: [UserController],
   providers: [UserService, JwtStrategy],

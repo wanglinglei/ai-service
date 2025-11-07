@@ -26,7 +26,8 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     // 用户相关公开接口
     '/ai-service/user/register',
     '/ai-service/user/login',
-    '/ai-service/user/captcha',
+    // 通用接口
+    '/ai-service/general/captcha',
     // 健康检查接口
     '/ai-service/chat/health',
     '/ai-service/video/health',
@@ -34,6 +35,7 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     '/ai-service/docx-process/health',
     '/ai-service/user/health',
     '/ai-service/alipay-auth/health',
+    '/ai-service/general/health',
   ],
   prefix: [
     // 可以添加路径前缀，例如所有 /public/* 路径

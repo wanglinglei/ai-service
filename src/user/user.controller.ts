@@ -34,14 +34,6 @@ export class UserController {
     return this.userService.login(loginDto, req);
   }
 
-  @Get('/captcha')
-  async getCaptcha(@Request() req: ExpressRequest) {
-    const { data } = await this.userService.getCaptcha(req.session);
-    return {
-      image: `data:image/svg+xml;base64,${Buffer.from(data).toString('base64')}`,
-    };
-  }
-
   @Get('/profile')
   async getProfile(@Request() req: ExpressRequest & { user: JwtUser }) {
     const user = await this.userService.findById(req.user.userId);
