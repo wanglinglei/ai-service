@@ -73,6 +73,15 @@ export class User {
 
   @Column({
     type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: '授权范围',
+    default: 'chat,image,video,docx',
+  })
+  authScope: string;
+
+  @Column({
+    type: 'varchar',
     length: 10,
     nullable: true,
     comment: '省份',
