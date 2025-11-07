@@ -1,4 +1,17 @@
 import { ForbiddenException } from '@nestjs/common';
+import { ErrorCode } from '../config/error-code.config';
+
+/**
+ * 带错误码的权限异常
+ */
+class ForbiddenExceptionWithCode extends ForbiddenException {
+  constructor(
+    message: string,
+    public readonly errCode: ErrorCode,
+  ) {
+    super({ message, errCode });
+  }
+}
 
 /**
  * 功能名称映射
@@ -62,12 +75,16 @@ export function validatePermission(authScope: string, path: string): void {
   if (!feature) {
     return;
   }
+  if (feature === 'general' || feature === 'user') {
+    return;
+  }
 
   // 检查权限
   if (!hasPermission(authScope, feature)) {
     const featureName = FEATURE_MAP[feature] || feature;
-    throw new ForbiddenException(
+    throw new ForbiddenExceptionWithCode(
       `您没有访问 ${featureName} 功能的权限，请联系管理员`,
+      ErrorCode.FEATURE_PERMISSION_DENIED,
     );
   }
 }

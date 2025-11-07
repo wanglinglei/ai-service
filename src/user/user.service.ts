@@ -34,7 +34,7 @@ export class UserService {
   async register(
     registerDto: RegisterDto,
     req: ExpressRequest,
-  ): Promise<AuthResponseDto> {
+  ): Promise<boolean> {
     const {
       username,
       password,
@@ -96,21 +96,8 @@ export class UserService {
       source: UserSource.WEB,
     });
 
-    const savedUser = await this.userRepository.save(user);
-
-    // 生成 JWT token
-    const access_token = this.generateToken(savedUser);
-
-    return {
-      access_token,
-      user: {
-        id: savedUser.id,
-        username: savedUser.username,
-        nickname: savedUser.nickname,
-        email: savedUser.email,
-        avatar: savedUser.avatar,
-      },
-    };
+    await this.userRepository.save(user);
+    return true;
   }
 
   /**
@@ -130,7 +117,6 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { username },
     });
-
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
     }
@@ -151,16 +137,19 @@ export class UserService {
     }
 
     // 生成 JWT token
-    const access_token = this.generateToken(user);
+    const accessToken = this.generateToken(user);
 
     return {
-      access_token,
-      user: {
+      accessToken,
+      userInfo: {
         id: user.id,
         username: user.username,
         nickname: user.nickname,
         email: user.email,
         avatar: user.avatar,
+        gender: user.gender,
+        province: user.province,
+        city: user.city,
       },
     };
   }
@@ -175,11 +164,11 @@ export class UserService {
       throw new NotFoundException('用户不存在');
     }
     // 检查用户名是否已存在
-    const existingUserByUsername = await this.userRepository.findOne({
+    const existingUser = await this.userRepository.findOne({
       where: { username },
     });
 
-    if (existingUserByUsername) {
+    if (existingUser && existingUser.id !== id) {
       throw new ConflictException('用户名已存在');
     }
 

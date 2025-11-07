@@ -6,6 +6,8 @@ export interface BaseRequestParams {
   dashScopeAsync?: string;
 }
 
+import { ErrorCode } from '../../common/config/error-code.config';
+
 export interface ServiceNameConfig {
   label: string;
   value: string;
@@ -31,7 +33,8 @@ export interface ServiceDefinition<TParams = any, TResponse = any> {
 export interface UnifiedResponse<T = any> {
   success: boolean;
   data?: T;
-  error?: string;
+  message?: string;
+  errCode?: ErrorCode;
   code?: number;
   serviceName?: string;
   feature?: string;

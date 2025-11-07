@@ -10,6 +10,19 @@ import { Observable } from 'rxjs';
 import { Request } from 'express';
 import { isWhitelisted } from '../config/auth.config';
 import { validatePermission } from '../utils/permission.util';
+import { ErrorCode } from '../config/error-code.config';
+
+/**
+ * 带错误码的未授权异常
+ */
+class UnauthorizedExceptionWithCode extends UnauthorizedException {
+  constructor(
+    message: string,
+    public readonly errCode: ErrorCode,
+  ) {
+    super({ message, errCode });
+  }
+}
 
 /**
  * JWT 认证后的用户信息类型
@@ -83,6 +96,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _status?: any,
   ): TUser {
+    const request = context.switchToHttp().getRequest<Request>();
+    const path = request.url?.split('?')[0] || '';
+
+    // 添加调试日志
+    console.log('[JWT Guard] handleRequest called:', {
+      path,
+      hasError: !!err,
+      hasUser: !!user,
+      errorMessage:
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message?: unknown }).message)
+          : undefined,
+      authorizationHeader:
+        request.headers.authorization?.substring(0, 20) + '...',
+    });
+
     // 处理 token 过期错误
     if (err) {
       // TokenExpiredError 是 jsonwebtoken 库抛出的过期错误
@@ -100,22 +129,28 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             (err as { message: string }).message.includes('过期')));
 
       if (isExpiredError) {
-        throw new UnauthorizedException('Token 已过期，请重新登录');
+        throw new UnauthorizedExceptionWithCode(
+          'Token 已过期，请重新登录',
+          ErrorCode.TOKEN_EXPIRED,
+        );
       }
       // 其他认证错误
       throw err instanceof UnauthorizedException
         ? err
-        : new UnauthorizedException('未授权，请先登录');
+        : new UnauthorizedExceptionWithCode(
+            '未授权，请先登录',
+            ErrorCode.UNAUTHORIZED,
+          );
     }
 
     if (!user) {
-      throw new UnauthorizedException('未授权，请先登录');
+      throw new UnauthorizedExceptionWithCode(
+        '未授权，请先登录',
+        ErrorCode.UNAUTHORIZED,
+      );
     }
 
     // 认证成功后，检查用户权限
-    const request = context.switchToHttp().getRequest<Request>();
-    const path = request.url?.split('?')[0] || '';
-
     // 验证用户是否有权限访问该功能
     const jwtUser = user as JwtUser;
     if (jwtUser.authScope) {

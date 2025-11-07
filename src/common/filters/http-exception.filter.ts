@@ -8,10 +8,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UnifiedResponse } from '../../services/http/types';
+import { ErrorCode } from '../config/error-code.config';
 
 interface ExceptionResponse {
   message?: string | string[];
   code?: number;
+  errCode?: ErrorCode;
   [key: string]: unknown;
 }
 
@@ -27,6 +29,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = '服务器内部错误';
     let code = 500;
+    let errCode: ErrorCode | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -44,6 +47,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
           : responseObj.message;
         message = responseMessage || exception.message || '请求失败';
         code = responseObj.code || status;
+        // 只在业务层明确返回 errCode 时才使用
+        errCode = responseObj.errCode;
       } else {
         message = exception.message || '请求失败';
       }
@@ -60,21 +65,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // 记录错误日志
     // 对于认证错误（401）和权限错误（403），不记录日志，直接返回给前端
-    if (
-      status !== HttpStatus.UNAUTHORIZED &&
-      status !== HttpStatus.FORBIDDEN
-    ) {
+    if (status !== HttpStatus.UNAUTHORIZED && status !== HttpStatus.FORBIDDEN) {
+      const logMessage = errCode
+        ? `HTTP ${status} Error [${errCode}]: ${message}`
+        : `HTTP ${status} Error: ${message}`;
       this.logger.error(
-        `HTTP ${status} Error: ${message}`,
+        logMessage,
         exception instanceof Error ? exception.stack : undefined,
       );
     }
 
+    // 只在有 errCode 时才添加到响应中
     const errorResponse: UnifiedResponse = {
       success: false,
-      error: message,
+      message: message || '请求失败',
       code,
       feature,
+      ...(errCode && { errCode }),
     };
 
     response.status(status).json(errorResponse);
