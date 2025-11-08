@@ -1,7 +1,6 @@
 # 依赖
 node_modules
 npm-debug.log
-pnpm-lock.yaml
 
 # 构建产物
 dist
