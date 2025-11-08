@@ -72,9 +72,9 @@ jobs:
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           IMAGE_FILE="${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz"
+          DEPLOY_PATH="/opt/ai-service"
           LOCAL_SIZE=$(stat -f%z "$IMAGE_FILE" 2>/dev/null || stat -c%s "$IMAGE_FILE" 2>/dev/null || echo "0")
           echo "📤 正在上传 Docker 镜像到服务器..."
           echo "📦 本地镜像文件大小: $(du -h "$IMAGE_FILE" | cut -f1)"
@@ -93,7 +93,6 @@ jobs:
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           # 环境变量配置（从 GitHub Secrets 读取）
@@ -118,45 +117,83 @@ jobs:
           #!/bin/bash
           set -e
 
-          DEPLOY_PATH="$1"
-          IMAGE_NAME="$2"
-          IMAGE_TAG="$3"
+          DEPLOY_PATH="/opt/ai-service"
+          IMAGE_NAME="$1"
+          IMAGE_TAG="$2"
           IMAGE_FILE="$IMAGE_NAME-$IMAGE_TAG.tar.gz"
 
           cd "$DEPLOY_PATH"
 
+          # 清理旧的失败镜像文件（小于 1MB 的文件）
+          echo "🧹 清理旧的失败镜像文件..."
+          find "$DEPLOY_PATH" -name "$IMAGE_NAME-*.tar.gz" -type f -size -1M -delete 2>/dev/null || true
+
           # 检查镜像文件是否存在
           if [ ! -f "$IMAGE_FILE" ]; then
             echo "❌ 错误: 镜像文件 $IMAGE_FILE 不存在"
+            echo "📋 当前目录文件列表:"
+            ls -lh "$DEPLOY_PATH" | grep "$IMAGE_NAME" || echo "未找到相关文件"
             exit 1
           fi
 
-          # 检查文件大小
+          # 检查文件大小（至少 1MB）
           FILE_SIZE=$(stat -f%z "$IMAGE_FILE" 2>/dev/null || stat -c%s "$IMAGE_FILE" 2>/dev/null || echo "0")
+          FILE_SIZE_MB=$((FILE_SIZE / 1024 / 1024))
+
           if [ "$FILE_SIZE" -eq 0 ]; then
-            echo "❌ 错误: 镜像文件 $IMAGE_FILE 为空或损坏"
+            echo "❌ 错误: 镜像文件 $IMAGE_FILE 为空"
             exit 1
           fi
 
-          echo "📦 镜像文件大小: $(du -h "$IMAGE_FILE" | cut -f1)"
+          if [ "$FILE_SIZE" -lt 1048576 ]; then
+            echo "❌ 错误: 镜像文件 $IMAGE_FILE 过小 ($FILE_SIZE 字节, 约 $FILE_SIZE_MB MB)"
+            echo "⚠️  正常的 Docker 镜像文件应该至少 1MB，当前文件可能损坏或不完整"
+            exit 1
+          fi
+
+          echo "📦 镜像文件大小: $(du -h "$IMAGE_FILE" | cut -f1) ($FILE_SIZE 字节)"
 
           # 先解压，再加载（更可靠的方式）
           echo "📥 解压 Docker 镜像文件..."
           TEMP_TAR="${IMAGE_FILE%.gz}"
-          gunzip -c "$IMAGE_FILE" > "$TEMP_TAR" || {
-            echo "❌ 错误: 解压镜像文件失败"
-            exit 1
-          }
 
-          echo "📥 加载 Docker 镜像..."
-          docker load < "$TEMP_TAR" || {
-            echo "❌ 错误: 加载 Docker 镜像失败"
+          # 解压文件
+          if ! gunzip -c "$IMAGE_FILE" > "$TEMP_TAR"; then
+            echo "❌ 错误: 解压镜像文件失败"
+            echo "🔍 检查文件完整性..."
+            file "$IMAGE_FILE" || true
+            exit 1
+          fi
+
+          # 验证解压后的 tar 文件
+          TAR_SIZE=$(stat -f%z "$TEMP_TAR" 2>/dev/null || stat -c%s "$TEMP_TAR" 2>/dev/null || echo "0")
+          if [ "$TAR_SIZE" -lt 1048576 ]; then
+            echo "❌ 错误: 解压后的 tar 文件过小 ($TAR_SIZE 字节)，可能解压失败"
             rm -f "$TEMP_TAR"
             exit 1
-          }
+          fi
+          echo "✅ 解压成功，tar 文件大小: $(du -h "$TEMP_TAR" | cut -f1)"
+
+          # 验证 tar 文件格式
+          if ! tar -tzf "$IMAGE_FILE" > /dev/null 2>&1 && ! file "$TEMP_TAR" | grep -q "tar archive"; then
+            echo "⚠️  警告: tar 文件格式可能不正确，但继续尝试加载..."
+          fi
+
+          echo "📥 加载 Docker 镜像..."
+          if ! docker load < "$TEMP_TAR"; then
+            echo "❌ 错误: 加载 Docker 镜像失败"
+            echo "🔍 调试信息:"
+            echo "  - 临时文件: $TEMP_TAR"
+            echo "  - 文件大小: $(du -h "$TEMP_TAR" | cut -f1)"
+            echo "  - Docker 版本: $(docker --version)"
+            echo "  - Docker 状态: $(systemctl is-active docker 2>/dev/null || echo 'unknown')"
+            rm -f "$TEMP_TAR"
+            exit 1
+          fi
 
           # 清理临时文件
           rm -f "$TEMP_TAR"
+          echo "✅ 镜像加载成功"
 
           # 验证镜像是否加载成功
           if ! docker image inspect "$IMAGE_NAME:$IMAGE_TAG" > /dev/null 2>&1; then
@@ -206,11 +243,12 @@ jobs:
           chmod +x deploy.sh
 
           # 上传部署脚本到服务器
+          DEPLOY_PATH="/opt/ai-service"
           scp deploy.sh ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
 
           # 在服务器上执行部署脚本，传递环境变量
           echo "🚀 正在服务器上执行部署..."
-          ssh ${SERVER_USERNAME}@${SERVER_HOST} "ENV_PORT='${ENV_PORT}' ENV_NODE_ENV='${ENV_NODE_ENV}' ENV_GLM_API_KEY='${ENV_GLM_API_KEY}' ENV_TY_API_KEY='${ENV_TY_API_KEY}' ENV_DB_HOST='${ENV_DB_HOST}' ENV_DB_PORT='${ENV_DB_PORT}' ENV_DB_USERNAME='${ENV_DB_USERNAME}' ENV_DB_PASSWORD='${ENV_DB_PASSWORD}' ENV_DB_NAME='${ENV_DB_NAME}' ENV_APP_PRIVATE_KEY='${ENV_APP_PRIVATE_KEY}' ENV_ALIPAY_PUBLIC_KEY='${ENV_ALIPAY_PUBLIC_KEY}' ENV_FRONTEND_ORIGIN='${ENV_FRONTEND_ORIGIN}' ENV_COS_SECRET_ID='${ENV_COS_SECRET_ID}' ENV_COS_SECRET_KEY='${ENV_COS_SECRET_KEY}' ENV_SESSION_SECRET='${ENV_SESSION_SECRET}' bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} ${IMAGE_NAME} ${IMAGE_TAG} && rm -f ${DEPLOY_PATH}/deploy.sh"
+          ssh ${SERVER_USERNAME}@${SERVER_HOST} "ENV_PORT='${ENV_PORT}' ENV_NODE_ENV='${ENV_NODE_ENV}' ENV_GLM_API_KEY='${ENV_GLM_API_KEY}' ENV_TY_API_KEY='${ENV_TY_API_KEY}' ENV_DB_HOST='${ENV_DB_HOST}' ENV_DB_PORT='${ENV_DB_PORT}' ENV_DB_USERNAME='${ENV_DB_USERNAME}' ENV_DB_PASSWORD='${ENV_DB_PASSWORD}' ENV_DB_NAME='${ENV_DB_NAME}' ENV_APP_PRIVATE_KEY='${ENV_APP_PRIVATE_KEY}' ENV_ALIPAY_PUBLIC_KEY='${ENV_ALIPAY_PUBLIC_KEY}' ENV_FRONTEND_ORIGIN='${ENV_FRONTEND_ORIGIN}' ENV_COS_SECRET_ID='${ENV_COS_SECRET_ID}' ENV_COS_SECRET_KEY='${ENV_COS_SECRET_KEY}' ENV_SESSION_SECRET='${ENV_SESSION_SECRET}' bash ${DEPLOY_PATH}/deploy.sh ${IMAGE_NAME} ${IMAGE_TAG} && rm -f ${DEPLOY_PATH}/deploy.sh"
 
           # 清理本地文件
           rm -f deploy.sh
