@@ -26,18 +26,26 @@ jobs:
           cache: 'pnpm' # 使用 pnpm 缓存
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
         run: pnpm run build
+
+      - name: Install production dependencies only
+        run: |
+          # 删除所有依赖，然后只安装生产依赖
+          rm -rf node_modules
+          pnpm install --prod --frozen-lockfile
 
       - name: Prepare deployment files
         run: |
           mkdir -p deploy
           # 将 dist 目录内的所有文件复制到 deploy 目录（不保留 dist 目录结构）
           cp -r dist/. deploy/ 2>/dev/null || true
+          # 复制生产依赖的 node_modules（只包含生产依赖）
+          cp -r node_modules deploy/
+          # 复制 package.json（用于运行脚本）
           cp package.json deploy/
-          cp pnpm-lock.yaml deploy/ 2>/dev/null || true
           # 如果需要 .env 文件，请确保在 GitHub Secrets 中配置并在服务器上创建
 
       - name: Create deployment archive
