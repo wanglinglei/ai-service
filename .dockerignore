@@ -1,0 +1,52 @@
+# 依赖
+node_modules
+npm-debug.log
+pnpm-lock.yaml
+
+# 构建产物
+dist
+build
+*.tsbuildinfo
+
+# 测试
+test
+coverage
+*.spec.ts
+*.e2e-spec.ts
+
+# 开发工具
+.git
+.github
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 环境文件
+.env
+.env.local
+.env.*.local
+
+# 日志
+logs
+*.log
+
+# 临时文件
+tmp
+temp
+uploads
+*.tmp
+
+# 文档
+README.md
+*.md
+docs
+
+# CI/CD
+.github
+
+# 其他
+.DS_Store
+Thumbs.db
+

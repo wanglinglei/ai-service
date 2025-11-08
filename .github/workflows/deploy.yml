@@ -1,4 +1,4 @@
-name: Build and Upload
+name: Build Docker Image and Deploy
 
 on:
   push:
@@ -6,52 +6,35 @@ on:
       - main # 当推送到 main 分支时触发
   workflow_dispatch: # 允许手动触发
 
+env:
+  IMAGE_NAME: ai-service
+  IMAGE_TAG: ${{ github.sha }}
+
 jobs:
-  build-and-upload:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
         with:
-          version: 8
+          context: .
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # 根据你的 Node.js 版本调整
-          cache: 'pnpm' # 使用 pnpm 缓存
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build project
-        run: pnpm run build
-
-      - name: Install production dependencies only
+      - name: Save Docker image to tar
         run: |
-          # 删除所有依赖，然后只安装生产依赖
-          rm -rf node_modules
-          pnpm install --prod --frozen-lockfile
-
-      - name: Prepare deployment files
-        run: |
-          mkdir -p deploy
-          # 将 dist 目录内的所有文件复制到 deploy 目录（不保留 dist 目录结构）
-          cp -r dist/. deploy/ 2>/dev/null || true
-          # 复制生产依赖的 node_modules（只包含生产依赖）
-          cp -r node_modules deploy/
-          # 复制 package.json（用于运行脚本）
-          cp package.json deploy/
-          # 如果需要 .env 文件，请确保在 GitHub Secrets 中配置并在服务器上创建
-
-      - name: Create deployment archive
-        run: |
-          cd deploy
-          tar -czf ../deploy.tar.gz .
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip > ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
+          echo "镜像已保存为 ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz"
+          ls -lh ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -62,11 +45,23 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Upload to server
+      - name: Upload Docker image to server
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "📤 正在上传 Docker 镜像到服务器..."
+          scp ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
+          echo "✅ 镜像上传完成"
+
+      - name: Deploy to server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
           # 环境变量配置（从 GitHub Secrets 读取）
           ENV_PORT: ${{ secrets.ENV_PORT }}
           ENV_NODE_ENV: ${{ secrets.ENV_NODE_ENV }}
@@ -82,66 +77,74 @@ jobs:
           ENV_FRONTEND_ORIGIN: ${{ secrets.ENV_FRONTEND_ORIGIN }}
           ENV_COS_SECRET_ID: ${{ secrets.ENV_COS_SECRET_ID }}
           ENV_COS_SECRET_KEY: ${{ secrets.ENV_COS_SECRET_KEY }}
+          ENV_SESSION_SECRET: ${{ secrets.ENV_SESSION_SECRET }}
         run: |
-          # 上传部署文件
-          echo "正在上传部署文件到服务器..."
-          scp deploy.tar.gz ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
-
-          # 创建并上传部署脚本（删除所有文件并解压到当前目录）
+          # 创建部署脚本
           cat > deploy.sh << 'DEPLOYSCRIPT'
           #!/bin/bash
           set -e
+
           DEPLOY_PATH="$1"
+          IMAGE_NAME="$2"
+          IMAGE_TAG="$3"
+          IMAGE_FILE="$IMAGE_NAME-$IMAGE_TAG.tar.gz"
+
           cd "$DEPLOY_PATH"
 
-          # 删除当前目录下的所有文件（保留目录本身）
-          echo "删除所有旧文件..."
-          find . -mindepth 1 -maxdepth 1 ! -name 'deploy.tar.gz' ! -name 'deploy.sh' -exec rm -rf {} + 2>/dev/null || true
+          echo "📥 加载 Docker 镜像..."
+          gunzip -c "$IMAGE_FILE" | docker load
 
-          # 解压新版本到当前目录
-          echo "解压部署文件到当前目录..."
-          tar -xzf deploy.tar.gz
+          echo "🏷️  标记镜像为 latest..."
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
 
-          # 清理部署文件
-          rm -f deploy.tar.gz
+          echo "🛑 停止并删除旧容器..."
+          docker stop ai-service 2>/dev/null || true
+          docker rm ai-service 2>/dev/null || true
 
-          echo "文件已上传并解压完成！"
-          echo "请在服务器上手动重启应用。"
+          echo "🚀 启动新容器..."
+          docker run -d \
+            --name ai-service \
+            --restart unless-stopped \
+            -p "${ENV_PORT:-3000}:3000" \
+            -e NODE_ENV="${ENV_NODE_ENV:-production}" \
+            -e PORT="${ENV_PORT:-3000}" \
+            -e GLM_API_KEY="${ENV_GLM_API_KEY}" \
+            -e TY_API_KEY="${ENV_TY_API_KEY}" \
+            -e DB_HOST="${ENV_DB_HOST}" \
+            -e DB_PORT="${ENV_DB_PORT}" \
+            -e DB_USERNAME="${ENV_DB_USERNAME}" \
+            -e DB_PASSWORD="${ENV_DB_PASSWORD}" \
+            -e DB_NAME="${ENV_DB_NAME}" \
+            -e APP_PRIVATE_KEY="${ENV_APP_PRIVATE_KEY}" \
+            -e ALIPAY_PUBLIC_KEY="${ENV_ALIPAY_PUBLIC_KEY}" \
+            -e FRONTEND_ORIGIN="${ENV_FRONTEND_ORIGIN}" \
+            -e COS_SECRET_ID="${ENV_COS_SECRET_ID}" \
+            -e COS_SECRET_KEY="${ENV_COS_SECRET_KEY}" \
+            -e SESSION_SECRET="${ENV_SESSION_SECRET:-your-session-secret-key}" \
+            -v "$DEPLOY_PATH/uploads:/app/uploads" \
+            "$IMAGE_NAME:$IMAGE_TAG"
+
+          echo "🧹 清理镜像文件..."
+          rm -f "$IMAGE_FILE"
+
+          echo "🧹 清理未使用的镜像..."
+          docker image prune -f
+
+          echo "✅ 部署完成！"
           DEPLOYSCRIPT
 
           chmod +x deploy.sh
+
+          # 上传部署脚本到服务器
           scp deploy.sh ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
 
-          # 执行部署脚本（删除所有文件并解压到当前目录）
-          echo "正在服务器上删除所有文件并解压新文件..."
-          ssh ${SERVER_USERNAME}@${SERVER_HOST} "bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} && rm -f ${DEPLOY_PATH}/deploy.sh"
+          # 在服务器上执行部署脚本，传递环境变量
+          echo "🚀 正在服务器上执行部署..."
+          ssh ${SERVER_USERNAME}@${SERVER_HOST} "ENV_PORT='${ENV_PORT}' ENV_NODE_ENV='${ENV_NODE_ENV}' ENV_GLM_API_KEY='${ENV_GLM_API_KEY}' ENV_TY_API_KEY='${ENV_TY_API_KEY}' ENV_DB_HOST='${ENV_DB_HOST}' ENV_DB_PORT='${ENV_DB_PORT}' ENV_DB_USERNAME='${ENV_DB_USERNAME}' ENV_DB_PASSWORD='${ENV_DB_PASSWORD}' ENV_DB_NAME='${ENV_DB_NAME}' ENV_APP_PRIVATE_KEY='${ENV_APP_PRIVATE_KEY}' ENV_ALIPAY_PUBLIC_KEY='${ENV_ALIPAY_PUBLIC_KEY}' ENV_FRONTEND_ORIGIN='${ENV_FRONTEND_ORIGIN}' ENV_COS_SECRET_ID='${ENV_COS_SECRET_ID}' ENV_COS_SECRET_KEY='${ENV_COS_SECRET_KEY}' ENV_SESSION_SECRET='${ENV_SESSION_SECRET}' bash ${DEPLOY_PATH}/deploy.sh ${DEPLOY_PATH} ${IMAGE_NAME} ${IMAGE_TAG} && rm -f ${DEPLOY_PATH}/deploy.sh"
 
-          # 创建 .env 文件
-          echo "正在创建 .env 文件..."
-          {
-            echo "NODE_ENV=${ENV_NODE_ENV:-production}"
-            echo "PORT=${ENV_PORT:-3000}"
-            echo "GLM_API_KEY=${ENV_GLM_API_KEY}"
-            echo "TY_API_KEY=${ENV_TY_API_KEY}"
-            echo "DB_HOST=${ENV_DB_HOST}"
-            echo "DB_PORT=${ENV_DB_PORT}"
-            echo "DB_USERNAME=${ENV_DB_USERNAME}"
-            echo "DB_PASSWORD=${ENV_DB_PASSWORD}"
-            echo "DB_NAME=${ENV_DB_NAME}"
-            echo "APP_PRIVATE_KEY=${ENV_APP_PRIVATE_KEY}"
-            echo "ALIPAY_PUBLIC_KEY=${ENV_ALIPAY_PUBLIC_KEY}"
-            echo "FRONTEND_ORIGIN=${ENV_FRONTEND_ORIGIN}"
-            echo "COS_SECRET_ID=${ENV_COS_SECRET_ID}"
-            echo "COS_SECRET_KEY=${ENV_COS_SECRET_KEY}"
-          } > .env
-          scp .env ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
-          rm -f .env
+          # 清理本地文件
+          rm -f deploy.sh
+          rm -f ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
 
-          echo "✅ 部署文件已成功上传到服务器！"
-          echo "✅ 环境变量已配置完成！"
-          echo "⚠️  请记得在服务器上手动重启应用。"
-
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -rf deploy deploy.tar.gz
+          echo "✅ 部署成功完成！"
+          echo "📦 镜像: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
