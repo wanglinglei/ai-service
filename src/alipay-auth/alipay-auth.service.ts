@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 interface AlipayUserInfoResponse {
-  nick_name?: string;
+  nickName?: string;
   avatar?: string;
   gender?: string;
   code?: string;
@@ -77,11 +77,11 @@ export class AlipayAuthService {
       // 查找或创建用户
       let user = await this.userService.findBySourceUserId(openId);
       this.logger.log(`user: ${JSON.stringify(user)}`);
-      const { nick_name, avatar, gender, province, city } = alipayUserInfo;
+      const { nickName, avatar, gender, province, city } = alipayUserInfo;
 
       if (!user) {
         // 创建新用户
-        const nickname = nick_name || `支付宝用户${openId.slice(-8)}`;
+        const nickname = nickName || `支付宝用户`;
 
         user = await this.userService.createAlipayUser({
           username: '',
