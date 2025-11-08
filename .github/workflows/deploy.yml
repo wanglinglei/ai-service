@@ -51,9 +51,20 @@ jobs:
           SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
+          IMAGE_FILE="${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz"
+          LOCAL_SIZE=$(stat -f%z "$IMAGE_FILE" 2>/dev/null || stat -c%s "$IMAGE_FILE" 2>/dev/null || echo "0")
           echo "📤 正在上传 Docker 镜像到服务器..."
-          scp ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
-          echo "✅ 镜像上传完成"
+          echo "📦 本地镜像文件大小: $(du -h "$IMAGE_FILE" | cut -f1)"
+          scp "$IMAGE_FILE" ${SERVER_USERNAME}@${SERVER_HOST}:${DEPLOY_PATH}/
+
+          # 验证文件是否成功上传
+          echo "🔍 验证服务器上的镜像文件..."
+          REMOTE_SIZE=$(ssh ${SERVER_USERNAME}@${SERVER_HOST} "stat -f%z ${DEPLOY_PATH}/$IMAGE_FILE 2>/dev/null || stat -c%s ${DEPLOY_PATH}/$IMAGE_FILE 2>/dev/null || echo '0'")
+          if [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ] || [ "$REMOTE_SIZE" = "0" ]; then
+            echo "❌ 错误: 镜像文件上传不完整 (本地: $LOCAL_SIZE, 远程: $REMOTE_SIZE)"
+            exit 1
+          fi
+          echo "✅ 镜像上传完成并验证通过"
 
       - name: Deploy to server
         env:
@@ -91,8 +102,44 @@ jobs:
 
           cd "$DEPLOY_PATH"
 
+          # 检查镜像文件是否存在
+          if [ ! -f "$IMAGE_FILE" ]; then
+            echo "❌ 错误: 镜像文件 $IMAGE_FILE 不存在"
+            exit 1
+          fi
+
+          # 检查文件大小
+          FILE_SIZE=$(stat -f%z "$IMAGE_FILE" 2>/dev/null || stat -c%s "$IMAGE_FILE" 2>/dev/null || echo "0")
+          if [ "$FILE_SIZE" -eq 0 ]; then
+            echo "❌ 错误: 镜像文件 $IMAGE_FILE 为空或损坏"
+            exit 1
+          fi
+
+          echo "📦 镜像文件大小: $(du -h "$IMAGE_FILE" | cut -f1)"
+
+          # 先解压，再加载（更可靠的方式）
+          echo "📥 解压 Docker 镜像文件..."
+          TEMP_TAR="${IMAGE_FILE%.gz}"
+          gunzip -c "$IMAGE_FILE" > "$TEMP_TAR" || {
+            echo "❌ 错误: 解压镜像文件失败"
+            exit 1
+          }
+
           echo "📥 加载 Docker 镜像..."
-          gunzip -c "$IMAGE_FILE" | docker load
+          docker load < "$TEMP_TAR" || {
+            echo "❌ 错误: 加载 Docker 镜像失败"
+            rm -f "$TEMP_TAR"
+            exit 1
+          }
+
+          # 清理临时文件
+          rm -f "$TEMP_TAR"
+
+          # 验证镜像是否加载成功
+          if ! docker image inspect "$IMAGE_NAME:$IMAGE_TAG" > /dev/null 2>&1; then
+            echo "❌ 错误: 镜像 $IMAGE_NAME:$IMAGE_TAG 加载后验证失败"
+            exit 1
+          fi
 
           echo "🏷️  标记镜像为 latest..."
           docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
