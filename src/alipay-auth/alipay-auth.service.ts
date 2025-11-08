@@ -19,7 +19,7 @@ interface AlipayUserInfoResponse {
 
 interface AuthCallbackResult {
   accessToken: string;
-  user: {
+  userInfo: {
     id: number;
     username: string;
     nickname: string;
@@ -109,7 +109,7 @@ export class AlipayAuthService {
 
       return {
         accessToken: jwtToken,
-        user: {
+        userInfo: {
           id: user.id,
           username: user.username,
           nickname: user.nickname,
