@@ -81,11 +81,10 @@ export class AlipayAuthService {
 
       if (!user) {
         // 创建新用户
-        const username = `alipay_${openId}`;
         const nickname = nick_name || `支付宝用户${openId.slice(-8)}`;
 
         user = await this.userService.createAlipayUser({
-          username,
+          username: '',
           nickname,
           alipayUserId: openId,
           avatar,
