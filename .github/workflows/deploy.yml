@@ -21,20 +21,43 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build and save Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: false
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          outputs: type=tar,dest=${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Save Docker image to tar
+      - name: Compress Docker image
         run: |
-          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip > ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
-          echo "镜像已保存为 ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz"
+          echo "💾 正在压缩 Docker 镜像..."
+          if [ ! -f "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar" ]; then
+            echo "❌ 错误: 镜像 tar 文件不存在"
+            exit 1
+          fi
+
+          # 验证 tar 文件大小
+          TAR_SIZE=$(stat -f%z "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar" 2>/dev/null || stat -c%s "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar" 2>/dev/null || echo "0")
+          if [ "$TAR_SIZE" -lt 1000000 ]; then
+            echo "❌ 警告: 镜像 tar 文件过小 ($TAR_SIZE 字节)，可能构建失败"
+            exit 1
+          fi
+
+          echo "📦 原始 tar 文件大小: $(du -h "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar" | cut -f1)"
+          gzip "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar"
+          echo "✅ 镜像已压缩为 ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz"
           ls -lh ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
+
+          # 验证压缩后的文件大小
+          GZ_SIZE=$(stat -f%z "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz" 2>/dev/null || stat -c%s "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz" 2>/dev/null || echo "0")
+          if [ "$GZ_SIZE" -lt 100000 ]; then
+            echo "❌ 错误: 压缩后的镜像文件过小 ($GZ_SIZE 字节)"
+            exit 1
+          fi
+          echo "✅ 压缩后文件大小: $(du -h "${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz" | cut -f1)"
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
