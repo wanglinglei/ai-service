@@ -95,8 +95,8 @@ export class AlipayAuthService {
         });
       } else {
         // 更新用户信息
-        if (alipayUserInfo.nick_name) {
-          user.nickname = alipayUserInfo.nick_name;
+        if (alipayUserInfo.nickName) {
+          user.nickname = alipayUserInfo.nickName;
         }
         if (alipayUserInfo.avatar) {
           user.avatar = alipayUserInfo.avatar;
