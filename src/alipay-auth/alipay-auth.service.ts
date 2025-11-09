@@ -83,7 +83,7 @@ export class AlipayAuthService {
         const nickname = nickName || `支付宝用户`;
 
         user = await this.userService.createAlipayUser({
-          username: '',
+          username: null, // 使用 null 而不是空字符串，避免唯一索引冲突
           nickname,
           alipayUserId: openId,
           avatar,

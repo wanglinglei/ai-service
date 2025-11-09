@@ -234,7 +234,7 @@ export class UserService {
    * 创建支付宝用户
    */
   async createAlipayUser(userData: {
-    username: string;
+    username: string | null;
     nickname: string;
     alipayUserId: string;
     avatar?: string;
