@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { parseDocxWithMammoth, cleanupFile } from './utils/docxParser';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
 
@@ -9,7 +8,11 @@ export class DocxProcessService {
     rawFile: Express.Multer.File,
     templateJson: string,
   ): Promise<any> {
-    const rawText = await mammoth.extractRawText({ path: rawFile.path });
+    // 使用 buffer 而不是文件路径，避免文件系统权限问题
+    if (!rawFile.buffer) {
+      throw new BadRequestException('文件数据不可用');
+    }
+    const rawText = await mammoth.extractRawText({ buffer: rawFile.buffer });
     const prompt = `
     请从以下原始文档中提取以下字段的信息：
     **字段列表**：
@@ -53,8 +56,7 @@ export class DocxProcessService {
       throw new BadRequestException(
         error instanceof Error ? error.message : '文档解析失败',
       );
-    } finally {
-      cleanupFile(rawFile.path);
     }
+    // 使用内存存储，无需清理文件
   }
 }
