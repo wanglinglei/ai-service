@@ -78,7 +78,6 @@ export class AlipayAuthService {
       let user = await this.userService.findBySourceUserId(openId);
       this.logger.log(`user: ${JSON.stringify(user)}`);
       const { nickName, avatar, gender, province, city } = alipayUserInfo;
-
       if (!user) {
         // 创建新用户
         const nickname = nickName || `支付宝用户`;
