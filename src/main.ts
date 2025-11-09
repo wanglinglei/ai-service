@@ -12,7 +12,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 dotenv.config();
 
 /**
- * 确保 uploads 目录存在并具有正确的权限
+ * 确保 uploads 目录存在
+ * 注意：如果使用 Docker 卷挂载，目录权限由宿主机决定，容器内无法修改
  */
 async function ensureUploadsDirectory() {
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -24,13 +25,21 @@ async function ensureUploadsDirectory() {
       await fs.promises.mkdir(uploadsDir, { recursive: true, mode: 0o755 });
       console.log(`✅ 已创建 uploads 目录: ${uploadsDir}`);
     } else {
-      // 确保现有目录有正确的权限
-      await fs.promises.chmod(uploadsDir, 0o755);
-      console.log(`✅ uploads 目录已存在: ${uploadsDir}`);
+      // 目录已存在，不尝试修改权限（卷挂载时可能没有权限）
+      // 检查目录是否可访问
+      try {
+        await fs.promises.access(uploadsDir, fs.constants.R_OK | fs.constants.W_OK);
+        console.log(`✅ uploads 目录已存在且可访问: ${uploadsDir}`);
+      } catch (accessError) {
+        console.warn(`⚠️ uploads 目录存在但可能无法访问: ${uploadsDir}`, accessError);
+        // 不抛出错误，让应用继续启动，实际使用时再处理
+      }
     }
   } catch (error) {
-    console.error(`❌ 无法创建或设置 uploads 目录权限: ${error}`);
-    throw error;
+    // 创建目录失败，记录错误但不阻止启动
+    // 如果目录已通过卷挂载存在，创建失败是正常的
+    console.warn(`⚠️ 无法创建 uploads 目录: ${uploadsDir}`, error);
+    console.warn(`⚠️ 如果使用 Docker 卷挂载，请确保宿主机目录存在且权限正确`);
   }
 }
 
