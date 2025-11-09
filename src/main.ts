@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import * as session from 'express-session';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
@@ -8,7 +10,34 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 // 加载环境变量
 dotenv.config();
+
+/**
+ * 确保 uploads 目录存在并具有正确的权限
+ */
+async function ensureUploadsDirectory() {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  
+  try {
+    // 检查目录是否存在
+    if (!fs.existsSync(uploadsDir)) {
+      // 创建目录，设置权限为 0o755 (rwxr-xr-x)
+      await fs.promises.mkdir(uploadsDir, { recursive: true, mode: 0o755 });
+      console.log(`✅ 已创建 uploads 目录: ${uploadsDir}`);
+    } else {
+      // 确保现有目录有正确的权限
+      await fs.promises.chmod(uploadsDir, 0o755);
+      console.log(`✅ uploads 目录已存在: ${uploadsDir}`);
+    }
+  } catch (error) {
+    console.error(`❌ 无法创建或设置 uploads 目录权限: ${error}`);
+    throw error;
+  }
+}
+
 async function bootstrap() {
+  // 确保 uploads 目录存在
+  await ensureUploadsDirectory();
+  
   const app = await NestFactory.create(AppModule);
 
   // 前端地址（本地开发）
