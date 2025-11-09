@@ -17,7 +17,7 @@ dotenv.config();
  */
 async function ensureUploadsDirectory() {
   const uploadsDir = path.join(process.cwd(), 'uploads');
-  
+
   try {
     // 检查目录是否存在
     if (!fs.existsSync(uploadsDir)) {
@@ -28,10 +28,16 @@ async function ensureUploadsDirectory() {
       // 目录已存在，不尝试修改权限（卷挂载时可能没有权限）
       // 检查目录是否可访问
       try {
-        await fs.promises.access(uploadsDir, fs.constants.R_OK | fs.constants.W_OK);
+        await fs.promises.access(
+          uploadsDir,
+          fs.constants.R_OK | fs.constants.W_OK,
+        );
         console.log(`✅ uploads 目录已存在且可访问: ${uploadsDir}`);
       } catch (accessError) {
-        console.warn(`⚠️ uploads 目录存在但可能无法访问: ${uploadsDir}`, accessError);
+        console.warn(
+          `⚠️ uploads 目录存在但可能无法访问: ${uploadsDir}`,
+          accessError,
+        );
         // 不抛出错误，让应用继续启动，实际使用时再处理
       }
     }
@@ -46,7 +52,7 @@ async function ensureUploadsDirectory() {
 async function bootstrap() {
   // 确保 uploads 目录存在
   await ensureUploadsDirectory();
-  
+
   const app = await NestFactory.create(AppModule);
 
   // 前端地址（本地开发）
