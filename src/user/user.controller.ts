@@ -34,8 +34,11 @@ export class UserController {
   }
 
   @Post('/update')
-  async update(@Body() updateDto: UpdateUserDto) {
-    return this.userService.update(updateDto);
+  async update(
+    @Body() updateDto: UpdateUserDto,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.userService.update(updateDto, req);
   }
 
   @Get('/profile')

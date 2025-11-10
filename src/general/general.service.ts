@@ -4,6 +4,14 @@ import { Request as ExpressRequest } from 'express';
 import { CosService, UploadImageResult } from '../lib/cosService';
 import { VerificationService } from '../lib/verificationService';
 import * as nodemailer from 'nodemailer';
+import * as dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
+
+const emailUser = '18627024273@163.com';
+const emailHost = 'smtp.163.com';
+const emailPort = 465;
 
 @Injectable()
 export class GeneralService {
@@ -16,11 +24,11 @@ export class GeneralService {
   ) {
     // 初始化邮件传输器（使用网易邮箱）
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.163.com',
-      port: parseInt(process.env.EMAIL_PORT || '465'),
+      host: emailHost,
+      port: emailPort,
       secure: true, // 使用 SSL
       auth: {
-        user: process.env.EMAIL_USER, // 发送邮件的邮箱地址
+        user: emailUser, // 发送邮件的邮箱地址
         pass: process.env.EMAIL_PASS, // 邮箱授权码（不是登录密码）
       },
     });
@@ -95,10 +103,8 @@ export class GeneralService {
     }
 
     // 检查邮箱配置
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      this.logger.error(
-        '邮箱配置缺失，请设置 EMAIL_USER 和 EMAIL_PASS 环境变量',
-      );
+    if (!process.env.EMAIL_PASS) {
+      this.logger.error('邮箱配置缺失，请设置 EMAIL_PASS 环境变量');
       throw new BadRequestException('邮箱服务未配置');
     }
 
@@ -121,7 +127,7 @@ export class GeneralService {
 
     // 邮件内容
     const mailOptions = {
-      from: `"magicAI" <${process.env.EMAIL_USER}>`, // 发送者
+      from: `"magicAI" <${emailUser}>`, // 发送者
       to: email, // 接收者
       subject: '邮箱验证码', // 主题
       html: `

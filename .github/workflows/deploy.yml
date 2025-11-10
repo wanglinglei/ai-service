@@ -127,6 +127,7 @@ jobs:
           ENV_COS_SECRET_ID: ${{ secrets.ENV_COS_SECRET_ID }}
           ENV_COS_SECRET_KEY: ${{ secrets.ENV_COS_SECRET_KEY }}
           ENV_SESSION_SECRET: ${{ secrets.ENV_SESSION_SECRET }}
+          ENV_EMAIL_PASS: ${{ secrets.ENV_EMAIL_PASS }}
         run: |
           # 创建部署脚本
           cat > deploy.sh << 'DEPLOYSCRIPT'
@@ -243,6 +244,7 @@ jobs:
             -e FRONTEND_ORIGIN="${ENV_FRONTEND_ORIGIN}" \
             -e COS_SECRET_ID="${ENV_COS_SECRET_ID}" \
             -e COS_SECRET_KEY="${ENV_COS_SECRET_KEY}" \
+            -e EMAIL_PASS="${ENV_EMAIL_PASS}" \
             -e SESSION_SECRET="${ENV_SESSION_SECRET:-your-session-secret-key}" \
             -v "$DEPLOY_PATH/uploads:/app/uploads" \
             "$IMAGE_NAME:$IMAGE_TAG"

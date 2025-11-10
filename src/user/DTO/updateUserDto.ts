@@ -9,4 +9,5 @@ export interface UpdateUserDto {
   gender?: Gender;
   province?: string;
   city?: string;
+  emailCode?: string;
 }

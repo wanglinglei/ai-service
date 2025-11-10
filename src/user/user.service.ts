@@ -157,11 +157,16 @@ export class UserService {
   /**
    * 更新用户信息
    */
-  async update(updateDto: UpdateUserDto): Promise<User> {
-    const { id, username, email, ...rest } = updateDto;
+  async update(updateDto: UpdateUserDto, req: ExpressRequest): Promise<User> {
+    const { id, username, email, emailCode } = updateDto;
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('用户不存在');
+    }
+    if (emailCode && email) {
+      if (!this.generalService.verifyEmailCode(req.session, email, emailCode)) {
+        throw new BadRequestException('邮箱验证码错误或已过期');
+      }
     }
     // 检查用户名是否已存在
     const existingUser = await this.userRepository.findOne({
@@ -178,7 +183,7 @@ export class UserService {
         where: { email },
       });
 
-      if (existingUserByEmail) {
+      if (existingUserByEmail && existingUserByEmail.id !== id) {
         throw new ConflictException('邮箱已被注册');
       }
     }
