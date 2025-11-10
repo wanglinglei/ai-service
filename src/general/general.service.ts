@@ -9,7 +9,7 @@ import * as dotenv from 'dotenv';
 // 加载环境变量
 dotenv.config();
 
-const emailUser = '18627024273@163.com';
+const emailUser = '18627024279@163.com';
 const emailHost = 'smtp.163.com';
 const emailPort = 465;
 

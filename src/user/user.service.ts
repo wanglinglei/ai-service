@@ -14,7 +14,13 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Request as ExpressRequest } from 'express';
 import { User, UserSource, Gender, UserStatus } from './entitys/user.entity';
-import { RegisterDto, UpdateUserDto, LoginDto, AuthResponseDto } from './DTO';
+import {
+  RegisterDto,
+  UpdateUserDto,
+  LoginDto,
+  AuthResponseDto,
+  EmailLoginDto,
+} from './DTO';
 
 import { GeneralService } from '../general/general.service';
 
@@ -131,6 +137,47 @@ export class UserService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
+    // 检查用户状态
+    if (user.status === UserStatus.DISABLED) {
+      throw new UnauthorizedException('账户已被禁用');
+    }
+
+    // 生成 JWT token
+    const accessToken = this.generateToken(user);
+
+    return {
+      accessToken,
+      userInfo: {
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+        email: user.email,
+        avatar: user.avatar,
+        gender: user.gender,
+        province: user.province,
+        city: user.city,
+      },
+    };
+  }
+
+  /**
+   * @description: 邮箱登录
+   * @param {EmailLoginDto} emailLoginDto
+   * @param {ExpressRequest} req
+   * @return {Promise<AuthResponseDto>}
+   */
+  async emailLogin(
+    emailLoginDto: EmailLoginDto,
+    req: ExpressRequest,
+  ): Promise<AuthResponseDto> {
+    const { email, emailCode } = emailLoginDto;
+    if (!this.generalService.verifyEmailCode(req.session, email, emailCode)) {
+      throw new BadRequestException('邮箱验证码错误或已过期');
+    }
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('用户不存在');
+    }
     // 检查用户状态
     if (user.status === UserStatus.DISABLED) {
       throw new UnauthorizedException('账户已被禁用');

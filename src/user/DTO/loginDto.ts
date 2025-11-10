@@ -3,3 +3,8 @@ export interface LoginDto {
   password: string;
   captcha: string;
 }
+
+export interface EmailLoginDto {
+  email: string;
+  emailCode: string;
+}

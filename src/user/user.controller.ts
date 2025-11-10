@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { RegisterDto, LoginDto, UpdateUserDto } from './DTO';
+import { RegisterDto, LoginDto, UpdateUserDto, EmailLoginDto } from './DTO';
 import { Request as ExpressRequest } from 'express';
 import { JwtUser } from '../common/guards/jwt-auth.guard';
 
@@ -31,6 +31,14 @@ export class UserController {
   @Post('/login')
   async login(@Body() loginDto: LoginDto, @Request() req: ExpressRequest) {
     return this.userService.login(loginDto, req);
+  }
+
+  @Post('emailLogin')
+  emailLogin(
+    @Body() emailLoginDto: EmailLoginDto,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.userService.emailLogin(emailLoginDto, req);
   }
 
   @Post('/update')
