@@ -38,7 +38,7 @@ export class User {
     unique: true,
     nullable: true,
     comment: '用户名',
-    default: '',
+    default: null,
   })
   username: string;
 

@@ -251,8 +251,8 @@ export class UserService {
       }
     }
 
-    const user = this.userRepository.create({
-      username: userData.username,
+    const user: User = this.userRepository.create({
+      username: userData.username ?? undefined,
       password: await this.hashPassword(crypto.randomBytes(16).toString('hex')), // 随机密码
       nickname: userData.nickname,
       avatar: userData.avatar,

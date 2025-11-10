@@ -2,6 +2,7 @@ export interface ImageRequestParams {
   prompt: string;
   model?: string;
   size?: string;
+  n?: number;
 }
 
 export interface ImageResponse {
