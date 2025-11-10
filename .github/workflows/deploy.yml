@@ -78,7 +78,7 @@ jobs:
         run: |
           DEPLOY_PATH="/opt/ai-service"
           echo "📁 确保服务器目录存在..."
-          ssh ${SERVER_USERNAME}@${SERVER_HOST} "mkdir -p ${DEPLOY_PATH}/uploads && chmod 755 ${DEPLOY_PATH} && chmod 755 ${DEPLOY_PATH}/uploads" || {
+          ssh ${SERVER_USERNAME}@${SERVER_HOST} "mkdir -p ${DEPLOY_PATH} && chmod 755 ${DEPLOY_PATH}" || {
             echo "❌ 错误: 无法创建服务器目录"
             exit 1
           }
@@ -246,7 +246,6 @@ jobs:
             -e COS_SECRET_KEY="${ENV_COS_SECRET_KEY}" \
             -e EMAIL_PASS="${ENV_EMAIL_PASS}" \
             -e SESSION_SECRET="${ENV_SESSION_SECRET:-your-session-secret-key}" \
-            -v "$DEPLOY_PATH/uploads:/app/uploads" \
             "$IMAGE_NAME:$IMAGE_TAG"
 
           echo "🧹 清理镜像文件..."

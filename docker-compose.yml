@@ -23,8 +23,6 @@ services:
       - COS_SECRET_ID=${COS_SECRET_ID}
       - COS_SECRET_KEY=${COS_SECRET_KEY}
       - SESSION_SECRET=${SESSION_SECRET:-your-session-secret-key}
-    volumes:
-      - ./uploads:/app/uploads
     networks:
       - ai-service-network
 

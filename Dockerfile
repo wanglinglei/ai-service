@@ -41,10 +41,6 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -g 1001 -S nodejs && \
   adduser -S nestjs -u 1001
 
-# 创建 uploads 目录并设置权限
-RUN mkdir -p /app/uploads && \
-  chmod 755 /app/uploads
-
 # 更改文件所有者
 RUN chown -R nestjs:nodejs /app
 USER nestjs
