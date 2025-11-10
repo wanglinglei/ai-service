@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Request,
+  Body,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
@@ -29,6 +30,13 @@ export class GeneralController {
     };
   }
 
+  @Post('/emailCode')
+  async sendEmailCode(
+    @Request() req: ExpressRequest,
+    @Body() body: { email: string },
+  ): Promise<{ success: boolean; message?: string }> {
+    return this.generalService.sendEmailCode(req.session, body.email);
+  }
   @Post('/upload')
   @UseInterceptors(
     FileInterceptor('file', {
