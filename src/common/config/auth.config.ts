@@ -27,6 +27,7 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     '/ai-service/user/register',
     '/ai-service/user/login',
     '/ai-service/alipay-auth/login',
+    '/ai-service/user/emailLogin',
     // 通用接口
     '/ai-service/general/captcha',
     '/ai-service/general/upload',
