@@ -41,6 +41,9 @@ export class DocxProcessService {
         },
         { role: 'user', content: prompt },
       ],
+      response_format: {
+        type: 'json_object',
+      },
     };
 
     try {
@@ -49,7 +52,7 @@ export class DocxProcessService {
         'chat_ty',
         body,
       );
-
+      this.logger.log('ty chat response', response);
       const data = JSON.parse(response.content);
       return data;
     } catch (error) {

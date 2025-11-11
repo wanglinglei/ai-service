@@ -26,7 +26,6 @@ export class TyChatService
         model,
       },
     });
-    this.logger.log('ty chat response', response);
     if (response?.choices?.[0]?.message) {
       return response.choices[0].message;
     }
