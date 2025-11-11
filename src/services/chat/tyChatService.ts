@@ -1,5 +1,6 @@
 import { baseFetch } from '../http/baseFetch';
 import { TyBaseService } from '../baseServices/tyBaseService';
+import { Logger } from '@nestjs/common';
 import type {
   ChatServiceDefinition,
   ChatRequestParams,
@@ -11,6 +12,7 @@ export class TyChatService
   extends TyBaseService
   implements ChatServiceDefinition
 {
+  private readonly logger = new Logger(TyChatService.name);
   name: ChatServiceName = 'chat_ty';
 
   async execute(params: ChatRequestParams) {
@@ -24,6 +26,7 @@ export class TyChatService
         model,
       },
     });
+    this.logger.log('ty chat response', response);
     if (response?.choices?.[0]?.message) {
       return response.choices[0].message;
     }
