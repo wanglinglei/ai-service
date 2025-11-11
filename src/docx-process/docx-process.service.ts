@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import { parseDocxWithMammoth, cleanupFile } from './utils/docxParser';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
 
@@ -32,7 +31,7 @@ export class DocxProcessService {
     -必须返回一个可直接解析的JSON数据,不要出现'/\`\`\`/'
     `;
     const body = {
-      model: 'qwen-max',
+      model: 'qwen-plus',
       messages: [
         {
           role: 'system',
@@ -41,6 +40,7 @@ export class DocxProcessService {
         },
         { role: 'user', content: prompt },
       ],
+      max_input_tokens: 1000000,
     };
 
     try {
@@ -60,6 +60,5 @@ export class DocxProcessService {
         error instanceof Error ? error.message : '文档解析失败',
       );
     }
-    // 使用内存存储，无需清理文件
   }
 }
