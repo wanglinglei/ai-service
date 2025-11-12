@@ -136,7 +136,8 @@ export class DocxProcessService {
     - 不要添加额外说明
     -必须返回一个可直接解析的JSON数据,不要出现'/\`\`\`/'
     `;
-    const response = await serviceController.executeService('chat', 'chat_ty', {
+
+    const body = {
       model: 'qwen-long',
       messages: [
         {
@@ -146,14 +147,17 @@ export class DocxProcessService {
         { role: 'system', content: `fileid://${fileId}` },
         { role: 'user', content: prompt },
       ],
-      response_format: { type: 'json_object' },
-    });
+    };
+    const response = await serviceController.executeService(
+      'chat',
+      'chat_ty',
+      body,
+    );
     const content = response?.content;
     if (typeof content !== 'string') {
       throw new BadRequestException('AI 服务返回的数据格式不正确');
     }
-
-    this.logger.log(`AI 服务返回的数据: ${content.length}`);
-    return content;
+    const data = JSON.parse(response?.content);
+    return data;
   }
 }
