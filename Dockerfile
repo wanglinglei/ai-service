@@ -3,7 +3,9 @@ FROM node:20-alpine AS builder
 
 
 # 设置时区
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata && \
+  ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+  echo "Asia/Shanghai" > /etc/timezone
 ENV TZ=Asia/Shanghai
 
 # 设置工作目录
@@ -26,6 +28,12 @@ RUN pnpm run build
 
 # 生产环境镜像
 FROM node:20-alpine AS production
+
+# 设置时区
+RUN apk add --no-cache tzdata && \
+  ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+  echo "Asia/Shanghai" > /etc/timezone
+ENV TZ=Asia/Shanghai
 
 # 设置工作目录
 WORKDIR /app
