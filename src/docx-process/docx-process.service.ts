@@ -1,7 +1,10 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
+import * as dotenv from 'dotenv';
 
+// 加载环境变量
+dotenv.config();
 @Injectable()
 export class DocxProcessService {
   private readonly logger = new Logger(DocxProcessService.name);
@@ -154,10 +157,37 @@ export class DocxProcessService {
       body,
     );
     const content = response?.content;
+    // 异步删除文件，不阻塞主业务流程，失败不影响主业务流程
+    void (async () => {
+      try {
+        const deleteResult = await fetch(
+          `https://dashscope.aliyuncs.com/compatible-mode/v1/files/${fileId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${process.env.TY_API_KEY}`,
+            },
+          },
+        );
+        if (deleteResult.ok) {
+          this.logger.log(`文件删除成功，file-id: ${fileId}`);
+        } else {
+          this.logger.warn(
+            `文件删除失败，file-id: ${fileId}，状态码: ${deleteResult.status}`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `文件删除异常，file-id: ${fileId}，错误: ${
+            error instanceof Error ? error.message : '未知错误'
+          }`,
+        );
+      }
+    })();
     if (typeof content !== 'string') {
       throw new BadRequestException('AI 服务返回的数据格式不正确');
     }
-    const data = JSON.parse(response?.content);
+    const data = JSON.parse(content);
     return data;
   }
 }
