@@ -34,12 +34,23 @@ export class UserController {
   ) {
     return this.userService.register(registerDto, req);
   }
-
+  /**
+   * @description: 用户登录
+   * @param {LoginDto} loginDto
+   * @param {ExpressRequest} req
+   * @return {Promise<AuthResponseDto>}
+   */
   @Post('/login')
   async login(@Body() loginDto: LoginDto, @Request() req: ExpressRequest) {
     return this.userService.login(loginDto, req);
   }
 
+  /**
+   * @description: 邮箱登录
+   * @param {EmailLoginDto} emailLoginDto
+   * @param {ExpressRequest} req
+   * @return {Promise<AuthResponseDto>}
+   */
   @Post('emailLogin')
   emailLogin(
     @Body() emailLoginDto: EmailLoginDto,
@@ -56,6 +67,11 @@ export class UserController {
     return this.userService.update(updateDto, req);
   }
 
+  /**
+   * @description: 获取用户个人信息
+   * @param {ExpressRequest & { user: JwtUser }} req
+   * @return {Promise<User>}
+   */
   @Get('/profile')
   async getProfile(@Request() req: ExpressRequest & { user: JwtUser }) {
     const user = await this.userService.findById(req.user.userId);
@@ -76,6 +92,11 @@ export class UserController {
     };
   }
 
+  /**
+   * @description: 获取用户列表
+   * @param {UserListDto} userListDto
+   * @return {Promise<User[]>}
+   */
   @Get('admin/userList')
   async getUserList(@Query() userListDto: UserListDto) {
     return this.userService.getUserList(userListDto);
