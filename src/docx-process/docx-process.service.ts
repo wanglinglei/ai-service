@@ -56,6 +56,9 @@ export class DocxProcessService {
         { role: 'user', content: prompt },
       ],
       max_input_tokens: 1000000,
+      response_format: {
+        type: 'json_object',
+      },
     };
 
     try {
