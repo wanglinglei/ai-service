@@ -5,9 +5,16 @@ import {
   Get,
   Request,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { RegisterDto, LoginDto, UpdateUserDto, EmailLoginDto } from './DTO';
+import {
+  RegisterDto,
+  LoginDto,
+  UpdateUserDto,
+  EmailLoginDto,
+  UserListDto,
+} from './DTO';
 import { Request as ExpressRequest } from 'express';
 import { JwtUser } from '../common/guards/jwt-auth.guard';
 
@@ -67,5 +74,10 @@ export class UserController {
       authScope: user.authScope,
       createdAt: user.createdAt,
     };
+  }
+
+  @Get('admin/userList')
+  async getUserList(@Query() userListDto: UserListDto) {
+    return this.userService.getUserList(userListDto);
   }
 }

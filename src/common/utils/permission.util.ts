@@ -47,13 +47,22 @@ export function extractFeatureFromPath(path: string): string | null {
  * @param feature 功能名称，例如：'chat', 'image', 'video', 'docx-process'
  * @returns 是否有权限
  */
-export function hasPermission(authScope: string, feature: string): boolean {
+export function hasPermission(
+  authScope: string,
+  feature: string,
+  path: string,
+): boolean {
   if (!authScope || !feature) {
     return false;
   }
 
   // 将 authScope 字符串转换为数组
   const scopes = authScope.split(',').map((s) => s.trim());
+
+  // 如果路径是 admin，判断有误admin 权限
+  if (path.includes('admin')) {
+    return scopes.includes('admin');
+  }
 
   // 获取功能对应的权限名称
   const permissionName = FEATURE_MAP[feature] || feature;
@@ -80,7 +89,7 @@ export function validatePermission(authScope: string, path: string): void {
   }
 
   // 检查权限
-  if (!hasPermission(authScope, feature)) {
+  if (!hasPermission(authScope, feature, path)) {
     const featureName = FEATURE_MAP[feature] || feature;
     throw new ForbiddenExceptionWithCode(
       `您没有访问 ${featureName} 功能的权限，请联系管理员`,

@@ -20,6 +20,7 @@ import {
   LoginDto,
   AuthResponseDto,
   EmailLoginDto,
+  UserListDto,
 } from './DTO';
 
 import { GeneralService } from '../general/general.service';
@@ -323,6 +324,31 @@ export class UserService {
    */
   async updateUser(user: User): Promise<User> {
     return this.userRepository.save(user);
+  }
+
+  /**
+   * 获取用户列表
+   */
+  async getUserList(userListDto: UserListDto): Promise<{
+    list: User[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const { page = 1, pageSize = 10 } = userListDto;
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+    const userList = await this.userRepository.find({
+      skip,
+      take,
+    });
+    const total = await this.userRepository.count();
+    return {
+      list: userList,
+      total: total,
+      page,
+      pageSize,
+    };
   }
 
   /**

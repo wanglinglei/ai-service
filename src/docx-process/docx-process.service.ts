@@ -2,9 +2,9 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
 import * as dotenv from 'dotenv';
-
 // 加载环境变量
 dotenv.config();
+
 @Injectable()
 export class DocxProcessService {
   private readonly logger = new Logger(DocxProcessService.name);

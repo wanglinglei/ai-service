@@ -55,6 +55,7 @@ export class User {
     type: 'varchar',
     length: 255,
     comment: '密码（加密）',
+    select: false,
   })
   password: string;
 
