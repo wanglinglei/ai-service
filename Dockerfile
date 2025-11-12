@@ -1,6 +1,11 @@
 # 使用 Node.js 20 作为基础镜像
 FROM node:20-alpine AS builder
 
+
+# 设置时区
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Shanghai
+
 # 设置工作目录
 WORKDIR /app
 
