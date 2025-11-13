@@ -120,14 +120,11 @@ export class UserService {
       throw new BadRequestException('验证码错误或已过期');
     }
 
-    // 查找用户
-    const user = await this.userRepository.findOne({
-      where: { username },
-    });
+    // 查找用户（包含密码用于校验）
+    const user = await this.findByUsernameWithPassword(username);
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
     }
-
     // 验证密码
     const isPasswordValid = await this.validatePassword(
       password,
@@ -243,10 +240,21 @@ export class UserService {
   }
 
   /**
-   * 根据用户名查找用户
+   * 根据用户名查找用户（不包含密码，用于一般查询）
    */
   async findByUsername(username: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { username } });
+  }
+
+  /**
+   * 根据用户名查找用户（包含密码，用于密码校验）
+   */
+  async findByUsernameWithPassword(username: string): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .where('user.username = :username', { username })
+      .addSelect('user.password')
+      .getOne();
   }
 
   /**
@@ -328,6 +336,7 @@ export class UserService {
 
   /**
    * 获取用户列表
+   * 注意：由于 password 字段配置了 select: false，返回的数据自动不包含 password
    */
   async getUserList(userListDto: UserListDto): Promise<{
     list: User[];
