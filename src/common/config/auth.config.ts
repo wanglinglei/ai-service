@@ -44,6 +44,7 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
   prefix: [
     // 可以添加路径前缀，例如所有 /public/* 路径
     // '/ai-service/public',
+    '/ai-service/account-manage/',
   ],
   regex: [
     // 可以添加正则表达式，例如所有 health 检查接口
