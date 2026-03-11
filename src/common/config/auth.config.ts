@@ -36,7 +36,6 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     '/ai-service/chat/health',
     '/ai-service/video/health',
     '/ai-service/image/health',
-    '/ai-service/docx-process/health',
     '/ai-service/user/health',
     '/ai-service/alipay-auth/health',
     '/ai-service/general/health',
@@ -45,6 +44,7 @@ export const DEFAULT_WHITELIST: WhitelistConfig = {
     // 可以添加路径前缀，例如所有 /public/* 路径
     // '/ai-service/public',
     '/ai-service/account-manage/',
+    '/ai-service/docx-process/*',
   ],
   regex: [
     // 可以添加正则表达式，例如所有 health 检查接口
