@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  RequestTimeoutException,
+} from '@nestjs/common';
 import { serviceController } from 'src/services';
 import * as mammoth from 'mammoth';
 import * as dotenv from 'dotenv';
@@ -8,6 +13,33 @@ dotenv.config();
 @Injectable()
 export class DocxProcessService {
   private readonly logger = new Logger(DocxProcessService.name);
+  private readonly FILE_UPLOAD_TIMEOUT_MS = 60_000;
+  private readonly AI_PROCESS_TIMEOUT_MS = 120_000;
+
+  private createTimeoutSignal(timeoutMs: number): AbortSignal {
+    return AbortSignal.timeout(timeoutMs);
+  }
+
+  private async withTimeout<T>(
+    task: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new RequestTimeoutException(timeoutMessage));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([task, timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
   async processData(
     rawFile: Express.Multer.File,
     templateJson: string,
@@ -91,6 +123,8 @@ export class DocxProcessService {
     rawFile: Express.Multer.File,
     templateJson: string,
   ): Promise<any> {
+    const startAt = Date.now();
+
     // 创建 FormData 对象
     const formData = new FormData();
     // 添加文件，使用 Blob 包装 buffer
@@ -103,6 +137,7 @@ export class DocxProcessService {
     // 添加 purpose 参数
     formData.append('purpose', 'file-extract');
 
+    const uploadStartAt = Date.now();
     const uploadResult = await fetch(
       'https://dashscope.aliyuncs.com/compatible-mode/v1/files',
       {
@@ -112,6 +147,7 @@ export class DocxProcessService {
           // 不要手动设置 Content-Type，让浏览器/Node.js 自动设置 multipart/form-data 边界
         },
         body: formData,
+        signal: this.createTimeoutSignal(this.FILE_UPLOAD_TIMEOUT_MS),
       },
     );
 
@@ -120,6 +156,9 @@ export class DocxProcessService {
       this.logger.error(`文件上传失败: ${errorText}`);
       throw new BadRequestException(`文件上传失败: ${uploadResult.statusText}`);
     }
+    this.logger.log(
+      `文件上传完成，耗时 ${Date.now() - uploadStartAt}ms，文件名: ${rawFile.originalname}`,
+    );
 
     const uploadData = await uploadResult.json();
     const fileId = uploadData.id;
@@ -151,10 +190,14 @@ export class DocxProcessService {
         { role: 'user', content: prompt },
       ],
     };
-    const response = await serviceController.executeService(
-      'chat',
-      'chat_ty',
-      body,
+    const aiStartAt = Date.now();
+    const response = await this.withTimeout(
+      serviceController.executeService('chat', 'chat_ty', body),
+      this.AI_PROCESS_TIMEOUT_MS,
+      `AI 解析超时（>${this.AI_PROCESS_TIMEOUT_MS / 1000}s），请缩小文档内容或改为异步处理`,
+    );
+    this.logger.log(
+      `AI 解析完成，耗时 ${Date.now() - aiStartAt}ms，file-id: ${fileId}`,
     );
     const content = response?.content;
     // 异步删除文件，不阻塞主业务流程，失败不影响主业务流程
@@ -188,6 +231,9 @@ export class DocxProcessService {
       throw new BadRequestException('AI 服务返回的数据格式不正确');
     }
     const data = JSON.parse(content);
+    this.logger.log(
+      `文档解析请求完成，总耗时 ${Date.now() - startAt}ms，文件名: ${rawFile.originalname}`,
+    );
     return data;
   }
 }

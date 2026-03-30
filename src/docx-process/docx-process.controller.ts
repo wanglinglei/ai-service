@@ -52,9 +52,9 @@ export class DocxProcessController {
     },
     @Body() body: { templateJson?: string },
   ): Promise<any> {
-    const { rawDocument = [] } = files;
+    const { rawDocument = [] } = files || { rawDocument: [] };
     const { templateJson = '' } = body;
-    if (!rawDocument) {
+    if (!rawDocument.length) {
       throw new Error('请上传内容文件：rawDocument');
     }
     // if (!templateJson) {
@@ -110,9 +110,9 @@ export class DocxProcessController {
     },
     @Body() body: { templateJson?: string },
   ): Promise<any> {
-    const { rawDocument = [] } = files;
+    const { rawDocument = [] } = files || { rawDocument: [] };
     const { templateJson = '' } = body;
-    if (!rawDocument) {
+    if (!rawDocument.length) {
       throw new Error('请上传内容文件：rawDocument');
     }
     if (!templateJson) {
